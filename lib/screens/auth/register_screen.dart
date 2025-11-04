@@ -258,11 +258,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 24),
 
                         // Divider
-                        Row(
+                        const Row(
                           children: [
                             Expanded(child: Divider(color: AppColors.lightGrey)),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
                                 'Or',
                                 style: TextStyle(
@@ -288,7 +288,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           label: const Text('Continue with Google'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
-                            side: BorderSide(color: AppColors.lightGrey),
+                            side: const BorderSide(color: AppColors.lightGrey),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -305,7 +305,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           label: const Text('Continue with Facebook'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
-                            side: BorderSide(color: AppColors.lightGrey),
+                            side: const BorderSide(color: AppColors.lightGrey),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
