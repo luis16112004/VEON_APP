@@ -1,4 +1,8 @@
 # Miscellaneous
+**/generated_plugin_registrant.cc
+**/generated_plugin_registrant.dart
+**/generated_plugins.cmake
+**/GeneratedPluginRegistrant.swift
 *.class
 *.log
 *.pyc
