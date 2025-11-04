@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:veon_app/screens/auth/constants/colors.dart';
 import 'core/theme/app_theme.dart';
 import 'screens/auth/welcome_screen.dart';
+import 'screens/home/app_shell.dart';
 void main() {
   runApp(const VeonApp());
 }
@@ -15,7 +15,13 @@ class VeonApp extends StatelessWidget {
       title: 'VEON Business',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      // Para ejecutar una pantalla específica en desarrollo,
+      // cambia temporalmente 'home' por esa pantalla.
+      // Ejemplo: home: AddClientScreen(),
       home: const WelcomeScreen(),
+      routes: {
+        AppShell.route: (_) => const AppShell(),
+      },
     );
   }
 }
