@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart'; // <-- SOLO UNA VEZ
+import 'package:flutter/material.dart';
 import 'package:veon_app/screens/auth/constants/colors.dart';
 
 import '../../../widgets/client_list_item.dart';
@@ -6,7 +6,12 @@ import '../../../widgets/statistics_card.dart';
 import '../../../widgets/top_clients_card.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onNavigateToClients;
+
+  const HomeScreen({
+    super.key,
+    this.onNavigateToClients,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +181,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: onNavigateToClients,
                       child: Row(
                         children: [
                           const Text(
@@ -227,43 +232,6 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppColors.black,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: AppColors.black,
-          selectedItemColor: AppColors.primaryGreen,
-          unselectedItemColor: AppColors.grey,
-          currentIndex: 0,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: '',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.close),
-              label: '',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              label: '',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings_outlined),
-              label: '',
-            ),
-          ],
         ),
       ),
     );
