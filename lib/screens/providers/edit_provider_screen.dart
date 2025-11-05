@@ -1,0 +1,465 @@
+import 'package:flutter/material.dart';
+import 'package:veon_app/models/provider.dart';
+import 'package:veon_app/screens/auth/constants/colors.dart';
+import 'package:veon_app/services/provider_service.dart';
+
+class EditProviderScreen extends StatefulWidget {
+  final Provider provider;
+  const EditProviderScreen({super.key, required this.provider});
+
+  @override
+  State<EditProviderScreen> createState() => _EditProviderScreenState();
+}
+
+class _EditProviderScreenState extends State<EditProviderScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _companyNameController;
+  late TextEditingController _contactNameController;
+  late TextEditingController _phoneNumberController;
+  late TextEditingController _emailController;
+  late TextEditingController _addressController;
+  late TextEditingController _postalCodeController;
+
+  String? _selectedCountry;
+  String? _selectedState;
+  String? _selectedCity;
+
+  final ProviderService _providerService = ProviderService();
+
+  final List<String> _countries = ['Mexico', 'United States', 'Canada', 'Spain', 'Colombia'];
+  final Map<String, List<String>> _statesByCountry = {
+    'Mexico': ['CDMX', 'Jalisco', 'Nuevo León', 'Puebla', 'Yucatán'],
+    'United States': ['California', 'Texas', 'New York', 'Florida', 'Illinois'],
+    'Canada': ['Ontario', 'Quebec', 'British Columbia', 'Alberta'],
+    'Spain': ['Madrid', 'Catalonia', 'Andalusia', 'Valencia'],
+    'Colombia': ['Bogotá', 'Antioquia', 'Valle del Cauca', 'Atlántico'],
+  };
+  final Map<String, List<String>> _citiesByState = {
+    'CDMX': ['Cuauhtemoc', 'Benito Juárez', 'Miguel Hidalgo', 'Coyoacán'],
+    'Jalisco': ['Guadalajara', 'Zapopan', 'Tlaquepaque'],
+    'Nuevo León': ['Monterrey', 'San Pedro Garza García'],
+    'Puebla': ['Puebla', 'Cholula'],
+    'Yucatán': ['Mérida', 'Valladolid'],
+    'California': ['Los Angeles', 'San Francisco', 'San Diego'],
+    'Texas': ['Houston', 'Dallas', 'Austin'],
+    'New York': ['New York City', 'Buffalo', 'Rochester'],
+    'Florida': ['Miami', 'Tampa', 'Orlando'],
+    'Illinois': ['Chicago', 'Aurora', 'Naperville'],
+    'Ontario': ['Toronto', 'Ottawa', 'Mississauga'],
+    'Quebec': ['Montreal', 'Quebec City'],
+    'British Columbia': ['Vancouver', 'Victoria'],
+    'Alberta': ['Calgary', 'Edmonton'],
+    'Madrid': ['Madrid', 'Alcalá de Henares'],
+    'Catalonia': ['Barcelona', 'Girona'],
+    'Andalusia': ['Seville', 'Málaga'],
+    'Valencia': ['Valencia', 'Alicante'],
+    'Bogotá': ['Bogotá', 'Chía'],
+    'Antioquia': ['Medellín', 'Bello'],
+    'Valle del Cauca': ['Cali', 'Palmira'],
+    'Atlántico': ['Barranquilla', 'Soledad'],
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _companyNameController = TextEditingController(text: widget.provider.companyName);
+    _contactNameController = TextEditingController(text: widget.provider.contactName);
+    _phoneNumberController = TextEditingController(text: widget.provider.phoneNumber);
+    _emailController = TextEditingController(text: widget.provider.email);
+    _addressController = TextEditingController(text: widget.provider.address);
+    _postalCodeController = TextEditingController(text: widget.provider.postalCode);
+    _selectedCountry = widget.provider.country;
+    _selectedState = widget.provider.state;
+    _selectedCity = widget.provider.city;
+  }
+
+  @override
+  void dispose() {
+    _companyNameController.dispose();
+    _contactNameController.dispose();
+    _phoneNumberController.dispose();
+    _emailController.dispose();
+    _addressController.dispose();
+    _postalCodeController.dispose();
+    super.dispose();
+  }
+
+  String? _validateCompanyName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'El nombre de la empresa es requerido';
+    }
+    if (value.trim().length < 2) {
+      return 'El nombre debe tener al menos 2 caracteres';
+    }
+    return null;
+  }
+
+  String? _validateContactName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'El nombre de contacto es requerido';
+    }
+    if (value.trim().length < 2) {
+      return 'El nombre debe tener al menos 2 caracteres';
+    }
+    return null;
+  }
+
+  String? _validatePhoneNumber(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'El número de teléfono es requerido';
+    }
+    final phoneRegex = RegExp(r'^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$');
+    if (!phoneRegex.hasMatch(value.trim())) {
+      return 'Ingrese un número de teléfono válido';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'El correo electrónico es requerido';
+    }
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    if (!emailRegex.hasMatch(value.trim())) {
+      return 'Ingrese un correo electrónico válido';
+    }
+    return null;
+  }
+
+  String? _validateAddress(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'La dirección es requerida';
+    }
+    if (value.trim().length < 5) {
+      return 'La dirección debe tener al menos 5 caracteres';
+    }
+    return null;
+  }
+
+  String? _validatePostalCode(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'El código postal es requerido';
+    }
+    return null;
+  }
+
+  Future<void> _handleConfirm() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        final updated = widget.provider.copyWith(
+          companyName: _companyNameController.text.trim(),
+          contactName: _contactNameController.text.trim(),
+          phoneNumber: _phoneNumberController.text.trim(),
+          email: _emailController.text.trim(),
+          address: _addressController.text.trim(),
+          postalCode: _postalCodeController.text.trim(),
+          country: _selectedCountry ?? '',
+          state: _selectedState ?? '',
+          city: _selectedCity ?? '',
+        );
+
+        final success = await _providerService.updateProvider(updated);
+
+        if (mounted) {
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Proveedor actualizado exitosamente'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+            Navigator.of(context).pop(true);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Error al actualizar el proveedor'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.black,
+      appBar: AppBar(
+        backgroundColor: AppColors.black,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Edit Provider',
+          style: TextStyle(color: AppColors.white),
+        ),
+        centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Image.asset(
+              'assets/images/iconoblanco.png',
+              width: 24,
+              height: 24,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.all_inclusive,
+                  color: AppColors.white,
+                  size: 24,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Company Name
+                TextFormField(
+                  controller: _companyNameController,
+                  decoration: _inputDecoration('Company Name', Icons.business_outlined),
+                  validator: _validateCompanyName,
+                  textInputAction: TextInputAction.next,
+                ),
+
+                const SizedBox(height: 20),
+
+                // Contact Name
+                TextFormField(
+                  controller: _contactNameController,
+                  decoration: _inputDecoration('Contact Name', Icons.person_outline),
+                  validator: _validateContactName,
+                  textInputAction: TextInputAction.next,
+                ),
+
+                const SizedBox(height: 20),
+
+                // Phone Number
+                TextFormField(
+                  controller: _phoneNumberController,
+                  keyboardType: TextInputType.phone,
+                  decoration: _inputDecoration('Phone Number', Icons.phone_outlined),
+                  validator: _validatePhoneNumber,
+                  textInputAction: TextInputAction.next,
+                ),
+
+                const SizedBox(height: 20),
+
+                // Email
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: _inputDecoration('Email', Icons.email_outlined),
+                  validator: _validateEmail,
+                  textInputAction: TextInputAction.next,
+                ),
+
+                const SizedBox(height: 20),
+
+                // Address
+                TextFormField(
+                  controller: _addressController,
+                  decoration: _inputDecoration('Address', Icons.location_on_outlined),
+                  validator: _validateAddress,
+                  textInputAction: TextInputAction.next,
+                  maxLines: 2,
+                ),
+
+                const SizedBox(height: 20),
+
+                // Postal Code
+                TextFormField(
+                  controller: _postalCodeController,
+                  keyboardType: TextInputType.number,
+                  decoration: _inputDecoration('Postal Code', Icons.pin_outlined),
+                  validator: _validatePostalCode,
+                  textInputAction: TextInputAction.next,
+                ),
+
+                const SizedBox(height: 20),
+
+                // Country Dropdown
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.lightGrey),
+                  ),
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedCountry,
+                    decoration: InputDecoration(
+                      hintText: 'Country',
+                      prefixIcon: const Icon(Icons.public_outlined, color: AppColors.grey),
+                      suffixIcon: const Icon(Icons.arrow_drop_down, color: AppColors.grey),
+                      filled: true,
+                      fillColor: AppColors.white,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                    items: _countries.map((country) {
+                      return DropdownMenuItem<String>(
+                        value: country,
+                        child: Text(country),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCountry = value;
+                        _selectedState = null;
+                        _selectedCity = null;
+                      });
+                    },
+                    validator: (value) => value == null ? 'El país es requerido' : null,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // State Dropdown
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.lightGrey),
+                  ),
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedState,
+                    decoration: InputDecoration(
+                      hintText: 'State',
+                      prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.grey),
+                      suffixIcon: const Icon(Icons.arrow_drop_down, color: AppColors.grey),
+                      filled: true,
+                      fillColor: AppColors.white,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                    items: _selectedCountry != null && _statesByCountry.containsKey(_selectedCountry)
+                        ? _statesByCountry[_selectedCountry]!.map((state) {
+                            return DropdownMenuItem<String>(
+                              value: state,
+                              child: Text(state),
+                            );
+                          }).toList()
+                        : [],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedState = value;
+                        _selectedCity = null;
+                      });
+                    },
+                    validator: (value) => value == null ? 'El estado es requerido' : null,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // City Dropdown
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.lightGrey),
+                  ),
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedCity,
+                    decoration: InputDecoration(
+                      hintText: 'City',
+                      prefixIcon: const Icon(Icons.location_city_outlined, color: AppColors.grey),
+                      suffixIcon: const Icon(Icons.arrow_drop_down, color: AppColors.grey),
+                      filled: true,
+                      fillColor: AppColors.white,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                    items: _selectedState != null && _citiesByState.containsKey(_selectedState)
+                        ? _citiesByState[_selectedState]!.map((city) {
+                            return DropdownMenuItem<String>(
+                              value: city,
+                              child: Text(city),
+                            );
+                          }).toList()
+                        : [],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCity = value;
+                      });
+                    },
+                    validator: (value) => value == null ? 'La ciudad es requerida' : null,
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Confirm Button
+                SizedBox(
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _handleConfirm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Confirm',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String hint, IconData icon) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: Icon(icon, color: AppColors.grey),
+      filled: true,
+      fillColor: AppColors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.lightGrey),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.lightGrey),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
+      ),
+    );
+  }
+}
