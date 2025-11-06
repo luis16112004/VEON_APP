@@ -72,59 +72,67 @@ class _AddProviderScreenState extends State<AddProviderScreen> {
 
   String? _validateCompanyName(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'El nombre de la empresa es requerido';
+      return 'Company name is required';
     }
-    if (value.trim().length < 2) {
-      return 'El nombre debe tener al menos 2 caracteres';
+    if (value.trim().length <= 2) {
+      return 'Name must be greater than 2 characters';
+    }
+    final nameRegex = RegExp(r'^[a-zA-Z\s]+$');
+    if (!nameRegex.hasMatch(value.trim())) {
+      return 'Please enter a valid name';
     }
     return null;
   }
 
   String? _validateContactName(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'El nombre de contacto es requerido';
+      return 'Contact name is required';
     }
-    if (value.trim().length < 2) {
-      return 'El nombre debe tener al menos 2 caracteres';
+    if (value.trim().length <= 2) {
+      return 'Name must be greater than 2 characters';
+    }
+    final nameRegex = RegExp(r'^[a-zA-Z\s]+$');
+    if (!nameRegex.hasMatch(value.trim())) {
+      return 'Please enter a valid name';
     }
     return null;
   }
 
   String? _validatePhoneNumber(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'El número de teléfono es requerido';
+      return 'Phone number is required';
     }
-    final phoneRegex = RegExp(r'^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$');
-    if (!phoneRegex.hasMatch(value.trim())) {
-      return 'Ingrese un número de teléfono válido';
+    final digitsOnly = value.replaceAll(RegExp(r'[^\d]'), '');
+    if (digitsOnly.length != 10) {
+      return 'Phone number must be exactly 10 digits';
     }
     return null;
   }
 
   String? _validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'El correo electrónico es requerido';
+      return 'Email is required';
     }
     final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     if (!emailRegex.hasMatch(value.trim())) {
-      return 'Ingrese un correo electrónico válido';
+      return 'Please enter a valid email';
     }
     return null;
   }
 
   String? _validateAddress(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'La dirección es requerida';
+      return 'Address is required';
     }
     if (value.trim().length < 5) {
-      return 'La dirección debe tener al menos 5 caracteres';
+      return 'Address must have at least 5 characters';
     }
     return null;
   }
 
   String? _validatePostalCode(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'El código postal es requerido';
+      return 'Postal code is required';
     }
     return null;
   }
@@ -151,7 +159,7 @@ class _AddProviderScreenState extends State<AddProviderScreen> {
           if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Proveedor agregado exitosamente'),
+                content: Text('Provider added successfully'),
                 backgroundColor: AppColors.success,
               ),
             );
@@ -159,7 +167,7 @@ class _AddProviderScreenState extends State<AddProviderScreen> {
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Error al guardar el proveedor'),
+                content: Text('Error saving provider'),
                 backgroundColor: AppColors.error,
               ),
             );
@@ -316,7 +324,7 @@ class _AddProviderScreenState extends State<AddProviderScreen> {
                         _selectedCity = null;
                       });
                     },
-                    validator: (value) => value == null ? 'El país es requerido' : null,
+                    validator: (value) => value == null ? 'Country is required' : null,
                   ),
                 ),
 
@@ -355,7 +363,7 @@ class _AddProviderScreenState extends State<AddProviderScreen> {
                         _selectedCity = null;
                       });
                     },
-                    validator: (value) => value == null ? 'El estado es requerido' : null,
+                    validator: (value) => value == null ? 'State is required' : null,
                   ),
                 ),
 
@@ -393,7 +401,7 @@ class _AddProviderScreenState extends State<AddProviderScreen> {
                         _selectedCity = value;
                       });
                     },
-                    validator: (value) => value == null ? 'La ciudad es requerida' : null,
+                    validator: (value) => value == null ? 'City is required' : null,
                   ),
                 ),
 

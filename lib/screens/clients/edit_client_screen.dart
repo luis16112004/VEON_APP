@@ -53,19 +53,21 @@ class _EditClientScreenState extends State<EditClientScreen> {
   }
 
   String? _validateFullName(String? v) {
-    if (v == null || v.trim().isEmpty) { setState(()=>_fullNameError=true); return 'Requerido'; }
-    if (v.trim().length < 3) { setState(()=>_fullNameError=true); return 'Mínimo 3 caracteres'; }
+    if (v == null || v.trim().isEmpty) { setState(()=>_fullNameError=true); return 'Full name is required'; }
+    if (v.trim().length <= 2) { setState(()=>_fullNameError=true); return 'Name must be greater than 2 characters'; }
+    final nameRegex = RegExp(r'^[a-zA-Z\s]+$');
+    if (!nameRegex.hasMatch(v.trim())) { setState(()=>_fullNameError=true); return 'Please enter a valid name'; }
     setState(()=>_fullNameError=false); return null;
   }
   String? _validatePhone(String? v) {
-    if (v == null || v.trim().isEmpty) { setState(()=>_phoneNumberError=true); return 'Requerido'; }
-    final r = RegExp(r'^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$');
-    if (!r.hasMatch(v.trim())) { setState(()=>_phoneNumberError=true); return 'Teléfono inválido'; }
+    if (v == null || v.trim().isEmpty) { setState(()=>_phoneNumberError=true); return 'Phone number is required'; }
+    final digitsOnly = v.replaceAll(RegExp(r'[^\d]'), '');
+    if (digitsOnly.length != 10) { setState(()=>_phoneNumberError=true); return 'Phone number must be exactly 10 digits'; }
     setState(()=>_phoneNumberError=false); return null;
   }
   String? _validateAddress(String? v) {
-    if (v == null || v.trim().isEmpty) { setState(()=>_addressError=true); return 'Requerido'; }
-    if (v.trim().length < 5) { setState(()=>_addressError=true); return 'Mínimo 5 caracteres'; }
+    if (v == null || v.trim().isEmpty) { setState(()=>_addressError=true); return 'Address is required'; }
+    if (v.trim().length < 5) { setState(()=>_addressError=true); return 'Address must have at least 5 characters'; }
     setState(()=>_addressError=false); return null;
   }
 
@@ -88,10 +90,10 @@ class _EditClientScreenState extends State<EditClientScreen> {
     final ok = await _clientService.updateClient(updated);
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cliente actualizado'), backgroundColor: AppColors.success));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Client updated successfully'), backgroundColor: AppColors.success));
       Navigator.pop(context, true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo actualizar'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error updating client'), backgroundColor: AppColors.error));
     }
   }
 

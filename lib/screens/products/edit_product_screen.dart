@@ -105,7 +105,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al seleccionar imagen: $e'),
+            content: Text('Error selecting image: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -115,39 +115,49 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
   String? _validateName(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'El nombre es requerido';
+      return 'Name is required';
     }
-    if (value.trim().length < 2) {
-      return 'El nombre debe tener al menos 2 caracteres';
+    if (value.trim().length <= 2) {
+      return 'Name must be greater than 2 characters';
+    }
+    // Check if it's a valid name (contains at least one letter)
+    final nameRegex = RegExp(r'^[a-zA-Z\s]+$');
+    if (!nameRegex.hasMatch(value.trim())) {
+      return 'Please enter a valid name';
     }
     return null;
   }
 
   String? _validateSKU(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'El SKU es requerido';
+      return 'SKU is required';
     }
     return null;
   }
 
   String? _validateCost(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'El costo es requerido';
+      return 'Cost is required';
     }
     final cost = double.tryParse(value);
     if (cost == null || cost < 0) {
-      return 'Ingrese un costo válido';
+      return 'Please enter a valid cost';
     }
     return null;
   }
 
   String? _validateSalePrice(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'El precio de venta es requerido';
+      return 'Sale price is required';
     }
     final price = double.tryParse(value);
     if (price == null || price < 0) {
-      return 'Ingrese un precio válido';
+      return 'Please enter a valid price';
+    }
+    // Validate that sale price is greater than cost
+    final cost = double.tryParse(_costController.text.trim());
+    if (cost != null && price <= cost) {
+      return 'Sale price must be greater than cost';
     }
     return null;
   }
@@ -176,7 +186,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
           if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Producto actualizado exitosamente'),
+                content: Text('Product updated successfully'),
                 backgroundColor: AppColors.success,
               ),
             );
@@ -184,7 +194,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Error al actualizar el producto'),
+                content: Text('Error updating product'),
                 backgroundColor: AppColors.error,
               ),
             );

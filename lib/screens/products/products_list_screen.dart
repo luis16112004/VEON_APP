@@ -4,6 +4,7 @@ import 'package:veon_app/models/product.dart';
 import 'package:veon_app/screens/auth/constants/colors.dart';
 import 'package:veon_app/screens/products/add_product_screen.dart';
 import 'package:veon_app/screens/products/edit_product_screen.dart';
+import 'package:veon_app/screens/products/inventory_replenishment_screen.dart';
 import 'package:veon_app/services/product_service.dart';
 
 class ProductsListScreen extends StatefulWidget {
@@ -47,7 +48,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al cargar productos: $e'),
+            content: Text('Error loading products: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -95,21 +96,33 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
     }
   }
 
+  Future<void> _navigateToInventoryReplenishment(Product product) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => InventoryReplenishmentScreen(product: product),
+      ),
+    );
+    if (changed == true) {
+      _loadProducts();
+    }
+  }
+
   Future<void> _deleteProduct(Product product) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Eliminar Producto'),
-        content: Text('¿Está seguro de eliminar ${product.name}?'),
+        title: const Text('Delete Product'),
+        content: Text('Are you sure you want to delete ${product.name}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
-              'Eliminar',
+              'Delete',
               style: TextStyle(color: AppColors.error),
             ),
           ),
@@ -124,7 +137,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Producto eliminado exitosamente'),
+                content: Text('Product deleted successfully'),
                 backgroundColor: AppColors.success,
               ),
             );
@@ -134,7 +147,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Error al eliminar el producto'),
+                content: Text('Error deleting product'),
                 backgroundColor: AppColors.error,
               ),
             );
@@ -267,8 +280,8 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                               const SizedBox(height: 16),
                               Text(
                                 _products.isEmpty
-                                    ? 'No hay productos registrados'
-                                    : 'No se encontraron productos',
+                                    ? 'No products registered'
+                                    : 'No products found',
                                 style: TextStyle(
                                   color: AppColors.grey,
                                   fontSize: 16,
@@ -360,6 +373,14 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  'Stock: ${product.stock}',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),
@@ -368,6 +389,24 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Inventory Replenishment Button
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.add,
+                    color: AppColors.white,
+                    size: 20,
+                  ),
+                  onPressed: () => _navigateToInventoryReplenishment(product),
+                ),
+              ),
+              const SizedBox(width: 8),
               // Edit Button
               Container(
                 width: 40,

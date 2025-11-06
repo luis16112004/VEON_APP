@@ -4,6 +4,7 @@ import 'package:veon_app/screens/auth/dashboard/home_screen.dart';
 import 'package:veon_app/screens/clients/clients_list_screen.dart';
 import 'package:veon_app/screens/products/products_list_screen.dart';
 import 'package:veon_app/screens/providers/providers_list_screen.dart';
+import 'package:veon_app/screens/profile/user_profile_screen.dart';
 
 class AppShell extends StatefulWidget {
   static const String route = '/app';
@@ -50,27 +51,44 @@ class _AppShellState extends State<AppShell> {
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           currentIndex: _currentIndex,
-          onTap: (i) => setState(() => _currentIndex = i),
+          onTap: (i) {
+            if (i == 4) {
+              // Profile item
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const UserProfileScreen(),
+                ),
+              );
+            } else {
+              setState(() => _currentIndex = i);
+            }
+          },
           backgroundColor: AppColors.black,
           selectedItemColor: AppColors.primaryGreen,
           unselectedItemColor: AppColors.grey,
-          items: const [
-            BottomNavigationBarItem(
+          items: [
+            const BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined),
               activeIcon: Icon(Icons.dashboard),
               label: 'Dashboard',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.group_outlined),
               label: 'Clients',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.inventory_2_outlined),
               label: 'Products',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.local_shipping_outlined),
               label: 'Providers',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Profile',
             ),
           ],
         ),
@@ -78,4 +96,3 @@ class _AppShellState extends State<AppShell> {
     );
   }
 }
-

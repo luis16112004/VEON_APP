@@ -47,7 +47,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al cargar clientes: $e'),
+            content: Text('Error loading clients: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -100,17 +100,17 @@ class _ClientsListScreenState extends State<ClientsListScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Eliminar Cliente'),
-        content: Text('¿Está seguro de eliminar a ${client.fullName}?'),
+        title: const Text('Delete Client'),
+        content: Text('Are you sure you want to delete ${client.fullName}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
-              'Eliminar',
+              'Delete',
               style: TextStyle(color: AppColors.error),
             ),
           ),
@@ -125,7 +125,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Cliente eliminado exitosamente'),
+                content: Text('Client deleted successfully'),
                 backgroundColor: AppColors.success,
               ),
             );
@@ -135,7 +135,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Error al eliminar el cliente'),
+                content: Text('Error deleting client'),
                 backgroundColor: AppColors.error,
               ),
             );
@@ -268,8 +268,8 @@ class _ClientsListScreenState extends State<ClientsListScreen> {
                               const SizedBox(height: 16),
                               Text(
                                 _clients.isEmpty
-                                    ? 'No hay clientes registrados'
-                                    : 'No se encontraron clientes',
+                                    ? 'No clients registered'
+                                    : 'No clients found',
                                 style: TextStyle(
                                   color: AppColors.grey,
                                   fontSize: 16,
@@ -347,7 +347,7 @@ class _ClientsListScreenState extends State<ClientsListScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  client.companyName ?? 'Sin compañía',
+                  client.companyName ?? 'No company',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,

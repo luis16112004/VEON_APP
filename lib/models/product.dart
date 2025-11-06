@@ -9,6 +9,7 @@ class Product {
   final String? unitOfMeasurement;
   final double cost;
   final double salePrice;
+  final int stock;
   final String? imagePath;
 
   Product({
@@ -22,6 +23,7 @@ class Product {
     this.unitOfMeasurement,
     required this.cost,
     required this.salePrice,
+    this.stock = 0,
     this.imagePath,
   });
 
@@ -37,6 +39,7 @@ class Product {
       'unitOfMeasurement': unitOfMeasurement,
       'cost': cost,
       'salePrice': salePrice,
+      'stock': stock,
       'imagePath': imagePath,
     };
   }
@@ -53,6 +56,7 @@ class Product {
       unitOfMeasurement: json['unitOfMeasurement'] as String?,
       cost: (json['cost'] as num).toDouble(),
       salePrice: (json['salePrice'] as num).toDouble(),
+      stock: json['stock'] as int? ?? 0,
       imagePath: json['imagePath'] as String?,
     );
   }
@@ -68,6 +72,7 @@ class Product {
     String? unitOfMeasurement,
     double? cost,
     double? salePrice,
+    int? stock,
     String? imagePath,
   }) {
     return Product(
@@ -81,6 +86,7 @@ class Product {
       unitOfMeasurement: unitOfMeasurement ?? this.unitOfMeasurement,
       cost: cost ?? this.cost,
       salePrice: salePrice ?? this.salePrice,
+      stock: stock ?? this.stock,
       imagePath: imagePath ?? this.imagePath,
     );
   }

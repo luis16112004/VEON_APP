@@ -46,7 +46,7 @@ class _ProvidersListScreenState extends State<ProvidersListScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al cargar proveedores: $e'),
+            content: Text('Error loading providers: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -99,17 +99,17 @@ class _ProvidersListScreenState extends State<ProvidersListScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Eliminar Proveedor'),
-        content: Text('¿Está seguro de eliminar ${provider.companyName}?'),
+        title: const Text('Delete Provider'),
+        content: Text('Are you sure you want to delete ${provider.companyName}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
-              'Eliminar',
+              'Delete',
               style: TextStyle(color: AppColors.error),
             ),
           ),
@@ -124,7 +124,7 @@ class _ProvidersListScreenState extends State<ProvidersListScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Proveedor eliminado exitosamente'),
+                content: Text('Provider deleted successfully'),
                 backgroundColor: AppColors.success,
               ),
             );
@@ -134,7 +134,7 @@ class _ProvidersListScreenState extends State<ProvidersListScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Error al eliminar el proveedor'),
+                content: Text('Error deleting provider'),
                 backgroundColor: AppColors.error,
               ),
             );
@@ -267,8 +267,8 @@ class _ProvidersListScreenState extends State<ProvidersListScreen> {
                               const SizedBox(height: 16),
                               Text(
                                 _providers.isEmpty
-                                    ? 'No hay proveedores registrados'
-                                    : 'No se encontraron proveedores',
+                                    ? 'No providers registered'
+                                    : 'No providers found',
                                 style: TextStyle(
                                   color: AppColors.grey,
                                   fontSize: 16,

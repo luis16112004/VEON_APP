@@ -60,7 +60,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al seleccionar imagen: $e'),
+            content: Text('Error selecting image: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -71,11 +71,17 @@ class _AddClientScreenState extends State<AddClientScreen> {
   String? _validateFullName(String? value) {
     if (value == null || value.trim().isEmpty) {
       setState(() => _fullNameError = true);
-      return 'El nombre completo es requerido';
+      return 'Full name is required';
     }
-    if (value.trim().length < 3) {
+    if (value.trim().length <= 2) {
       setState(() => _fullNameError = true);
-      return 'El nombre debe tener al menos 3 caracteres';
+      return 'Name must be greater than 2 characters';
+    }
+    // Check if it's a valid name (contains at least one letter)
+    final nameRegex = RegExp(r'^[a-zA-Z\s]+$');
+    if (!nameRegex.hasMatch(value.trim())) {
+      setState(() => _fullNameError = true);
+      return 'Please enter a valid name';
     }
     setState(() => _fullNameError = false);
     return null;
@@ -84,13 +90,13 @@ class _AddClientScreenState extends State<AddClientScreen> {
   String? _validatePhoneNumber(String? value) {
     if (value == null || value.trim().isEmpty) {
       setState(() => _phoneNumberError = true);
-      return 'El número de teléfono es requerido';
+      return 'Phone number is required';
     }
-    // Validar formato básico de teléfono (mínimo 8 dígitos)
-    final phoneRegex = RegExp(r'^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$');
-    if (!phoneRegex.hasMatch(value.trim())) {
+    // Remove all non-digit characters for validation
+    final digitsOnly = value.replaceAll(RegExp(r'[^\d]'), '');
+    if (digitsOnly.length != 10) {
       setState(() => _phoneNumberError = true);
-      return 'Ingrese un número de teléfono válido';
+      return 'Phone number must be exactly 10 digits';
     }
     setState(() => _phoneNumberError = false);
     return null;
@@ -99,12 +105,12 @@ class _AddClientScreenState extends State<AddClientScreen> {
   String? _validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) {
       setState(() => _emailError = true);
-      return 'El correo electrónico es requerido';
+      return 'Email is required';
     }
     final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     if (!emailRegex.hasMatch(value.trim())) {
       setState(() => _emailError = true);
-      return 'Ingrese un correo electrónico válido';
+      return 'Please enter a valid email';
     }
     setState(() => _emailError = false);
     return null;
@@ -113,11 +119,11 @@ class _AddClientScreenState extends State<AddClientScreen> {
   String? _validateAddress(String? value) {
     if (value == null || value.trim().isEmpty) {
       setState(() => _addressError = true);
-      return 'La dirección es requerida';
+      return 'Address is required';
     }
     if (value.trim().length < 5) {
       setState(() => _addressError = true);
-      return 'La dirección debe tener al menos 5 caracteres';
+      return 'Address must have at least 5 characters';
     }
     setState(() => _addressError = false);
     return null;
@@ -144,7 +150,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
           if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Cliente agregado exitosamente'),
+                content: Text('Client added successfully'),
                 backgroundColor: AppColors.success,
               ),
             );
@@ -152,7 +158,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Error al guardar el cliente'),
+                content: Text('Error saving client'),
                 backgroundColor: AppColors.error,
               ),
             );
@@ -242,7 +248,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Agregar imagen',
+                                'Add Image',
                                 style: TextStyle(
                                   color: AppColors.grey,
                                   fontSize: 14,
@@ -388,8 +394,8 @@ class _AddClientScreenState extends State<AddClientScreen> {
                   textInputAction: TextInputAction.next,
                   onChanged: (value) {
                     if (_phoneNumberError) {
-                      final phoneRegex = RegExp(r'^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$');
-                      if (phoneRegex.hasMatch(value.trim())) {
+                      final digitsOnly = value.replaceAll(RegExp(r'[^\d]'), '');
+                      if (digitsOnly.length == 10) {
                         setState(() => _phoneNumberError = false);
                       }
                     }
