@@ -16,17 +16,30 @@ dependencies:
   uuid: ^4.3.3
   storybook_flutter: ^0.14.1
 
+  # 🆕 DEPENDENCIAS PARA BASE DE DATOS
+  # Para conectar con MongoDB (cuando hay internet)
+  mongo_dart: ^0.10.3
+
+  # Para guardar datos localmente (sin internet)
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Para detectar si hay conexión a internet
+  connectivity_plus: ^6.0.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+
+  # 🆕 Para generar código de Hive
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.13
 
 # La sección de Flutter empieza aquí
 flutter:
   uses-material-design: true
 
   # TUS ASSETS VAN AQUÍ
-  # (con 2 espacios de indentación)
   assets:
-    # (con 4 espacios de indentación)
     - assets/images/

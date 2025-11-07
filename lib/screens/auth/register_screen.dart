@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:veon_app/screens/auth/constants/colors.dart';
-// Se quitó la importación de 'custom_button.dart' que no se usaba.
+import 'package:veon_app/services/auth_service.dart';
+
+import '../../services/auth_service.dart'; // ¡IMPORTACIÓN NECESARIA!
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,6 +13,7 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController(); // NUEVO: Para el nombre
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -18,31 +21,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose(); // DISPOSE DEL NUEVO CONTROLLER
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _handleRegister() {
+  void _handleRegister() async { // HACER ASÍNCRONA PARA LLAMAR AL SERVICIO
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
-      Future.delayed(const Duration(seconds: 2), () {
-        setState(() {
-          _isLoading = false;
-        });
+      // --- 1. LLAMADA AL SERVICIO DE AUTENTICACIÓN ---
+      final user = await AuthService.instance.register(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
+      setState(() {
+        _isLoading = false;
+      });
+
+      // --- 2. MANEJO DE RESULTADOS ---
+      if (user != null) {
+        // Registro exitoso
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully! (Demo)'),
-            backgroundColor: AppColors.success,
+          SnackBar(
+            content: Text('Account created successfully for ${user.name}!'),
+            backgroundColor: AppColors.primaryGreen,
           ),
         );
-
-        Navigator.pop(context);
-      });
+        // Navegar al Home (reemplaza la pantalla actual)
+        // Asegúrate de que '/home' sea la ruta correcta para tu pantalla principal
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        // Registro fallido (ej. error de conexión o MongoDB)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration failed. Check your connection or try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -54,22 +76,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
-
-            // --- CAMBIO DE ESTRUCTURA ---
-            // Usamos una Columna para poner el logo AFUERA
-            // y la tarjeta blanca DESPUÉS.
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-
                 // 1. LOGO (AFUERA DE LA TARJETA)
                 Image.asset(
                   'assets/images/veon_logo_color.png',
-                  height: 40, // Puedes ajustar la altura
+                  height: 40,
                 ),
-
-                const SizedBox(height: 32), // Espacio entre logo y tarjeta
+                const SizedBox(height: 32),
 
                 // 2. TARJETA BLANCA
                 Container(
@@ -85,9 +101,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-
-                        // --- SE ELIMINÓ EL LOGO DE AQUÍ DENTRO ---
-
                         // Title
                         const Text(
                           'Register',
@@ -114,7 +127,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             GestureDetector(
                               onTap: () {
-                                // Regresa a la pantalla anterior (Login)
                                 Navigator.pop(context);
                               },
                               child: const Text(
@@ -130,6 +142,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
 
                         const SizedBox(height: 32),
+
+                        // === NUEVO: Name Field ===
+                        const Text(
+                          'Name',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _nameController,
+                          keyboardType: TextInputType.name,
+                          decoration: InputDecoration(
+                            hintText: 'John Doe',
+                            filled: true,
+                            fillColor: AppColors.background,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your name';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 20),
+                        // === FIN Name Field ===
+
 
                         // Email Field
                         const Text(
