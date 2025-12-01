@@ -1,71 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // Para usar kDebugMode
+
 import 'core/theme/app_theme.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'screens/home/app_shell.dart';
 
-// 🆕 Imports para la base de datos
+// Imports para la base de datos
 import 'database/local_storage.dart';
 import 'database/mongo_service.dart';
 import 'database/sync_service.dart';
 
 void main() async {
-  // 🆕 Necesario para código asíncrono antes de runApp
+  // Asegura que los bindings de Flutter estén listos antes de ejecutar código asíncrono.
   WidgetsFlutterBinding.ensureInitialized();
 
-  print('');
-  print('🚀 ========================================');
-  print('🚀 Iniciando VEON Business App...');
-  print('🚀 ========================================');
-  print('');
+  // --- INICIALIZACIÓN DE SERVICIOS ESENCIALES ---
+  // Este bloque se ejecuta una sola vez al iniciar la app.
 
-  // 🆕 PASO 1: Inicializar almacenamiento local
-  print('📦 Inicializando almacenamiento local...');
-  try {
-    await LocalStorage.instance.init();
-    print('✅ Almacenamiento local listo');
-  } catch (e) {
-    print('❌ Error inicializando almacenamiento local: $e');
-    print('⚠️  La app puede tener problemas guardando datos');
-  }
+  // PASO 1: Iniciar almacenamiento local. Es rápido y no debe fallar.
+  await LocalStorage.instance.init();
 
-  print('');
-
-  // 🆕 PASO 2: Conectar a MongoDB (solo si hay internet)
-  print('☁️  Conectando a MongoDB...');
+  // PASO 2: Intentar conectar a MongoDB. No bloquea la app si falla.
   try {
     await MongoService.instance.connect();
-    print('✅ MongoDB conectado correctamente');
   } catch (e) {
-    print('⚠️  MongoDB no disponible (sin internet o error de conexión)');
-    print('   📱 La app funcionará en modo OFFLINE');
-    print('   💾 Los datos se guardarán localmente');
-    print('   🔄 Se sincronizarán automáticamente cuando haya internet');
+    // En modo de depuración, es útil saber por qué falló.
+    // En producción, la app simplemente seguirá en modo offline.
+    if (kDebugMode) {
+      print('⚠️ MongoDB no disponible al inicio: $e');
+    }
   }
 
-  print('');
+  // PASO 3: Iniciar el servicio de sincronización.
+  // Este se encargará de gestionar el estado online/offline y sincronizar datos.
+  await SyncService.instance.init();
 
-  // 🆕 PASO 3: Iniciar servicio de sincronización
-  print('🔄 Inicializando servicio de sincronización...');
-  try {
-    await SyncService.instance.init();
-    print('✅ Servicio de sincronización activo');
-
-    // Mostrar estadísticas
-    final stats = SyncService.instance.getStats();
-    print('   📊 Estadísticas:');
-    print('      - Online: ${stats['isOnline'] ? 'Sí' : 'No'}');
-    print('      - Datos locales: ${stats['totalDatos']}');
-    print('      - Operaciones pendientes: ${stats['operacionesPendientes']}');
-  } catch (e) {
-    print('❌ Error inicializando sincronización: $e');
+  if (kDebugMode) {
+    print('✅ VEON Business App: Servicios inicializados.');
   }
 
-  print('');
-  print('✅ ========================================');
-  print('✅ VEON Business App lista para usar');
-  print('✅ ========================================');
-  print('');
-
+  // Inicia la aplicación de Flutter.
   runApp(const VeonApp());
 }
 
@@ -76,14 +50,17 @@ class VeonApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'VEON Business',
+      // Se recomienda mantener esto en 'false' para la versión final.
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      // Para ejecutar una pantalla específica en desarrollo,
-      // cambia temporalmente 'home' por esa pantalla.
-      // Ejemplo: home: AddClientScreen(),
+
+      // La pantalla de inicio siempre será WelcomeScreen.
       home: const WelcomeScreen(),
+
+      // Rutas para la navegación dentro de la app.
       routes: {
         AppShell.route: (_) => const AppShell(),
+        // Aquí puedes agregar otras rutas principales si las tienes.
       },
     );
   }
