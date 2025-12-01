@@ -16,7 +16,7 @@ class Sale {
   final String? quotationId; // Si viene de una cotización
   final DateTime createdAt;
   final DateTime updatedAt;
-  final bool synced; // Para sincronización con MongoDB
+  final bool synced; // Para sincronización con Firebase
 
   Sale({
     required this.id,
@@ -104,19 +104,18 @@ class Sale {
       clientId: map['clientId'],
       clientName: map['clientName'],
       date: DateTime.parse(map['date']),
-      items: (map['items'] as List)
-          .map((item) => SaleItem.fromMap(item))
-          .toList(),
+      items:
+          (map['items'] as List).map((item) => SaleItem.fromMap(item)).toList(),
       subtotal: map['subtotal'].toDouble(),
       tax: map['tax'].toDouble(),
       discount: map['discount']?.toDouble() ?? 0.0,
       total: map['total'].toDouble(),
       paymentMethod: PaymentMethod.values.firstWhere(
-            (e) => e.toString() == map['paymentMethod'],
+        (e) => e.toString() == map['paymentMethod'],
         orElse: () => PaymentMethod.cash,
       ),
       status: SaleStatus.values.firstWhere(
-            (e) => e.toString() == map['status'],
+        (e) => e.toString() == map['status'],
         orElse: () => SaleStatus.completed,
       ),
       notes: map['notes'],

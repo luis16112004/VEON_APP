@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:veon_app/screens/auth/constants/colors.dart';
 import 'package:veon_app/services/auth_service.dart';
 
-import '../../services/auth_service.dart'; // ¡IMPORTACIÓN NECESARIA!
-
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -27,7 +25,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _handleRegister() async { // HACER ASÍNCRONA PARA LLAMAR AL SERVICIO
+  void _handleRegister() async {
+    // HACER ASÍNCRONA PARA LLAMAR AL SERVICIO
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
@@ -57,10 +56,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         // Asegúrate de que '/home' sea la ruta correcta para tu pantalla principal
         Navigator.pushReplacementNamed(context, '/home');
       } else {
-        // Registro fallido (ej. error de conexión o MongoDB)
+        // Registro fallido (ej. error de conexión o Firebase)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Registration failed. Check your connection or try again.'),
+            content: Text(
+                'Registration failed. Check your connection or try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -180,7 +180,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 20),
                         // === FIN Name Field ===
 
-
                         // Email Field
                         const Text(
                           'Email',
@@ -276,7 +275,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               return 'Password must contain at least one number';
                             }
                             // Check for at least one special character
-                            if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
+                            if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]')
+                                .hasMatch(value)) {
                               return 'Password must contain at least one special character';
                             }
                             return null;
@@ -300,20 +300,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             child: _isLoading
                                 ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
                                 : const Text(
-                              'Register',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                                    'Register',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                           ),
                         ),
 
@@ -322,7 +322,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         // Divider
                         const Row(
                           children: [
-                            Expanded(child: Divider(color: AppColors.lightGrey)),
+                            Expanded(
+                                child: Divider(color: AppColors.lightGrey)),
                             Padding(
                               padding: EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
@@ -333,7 +334,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               ),
                             ),
-                            Expanded(child: Divider(color: AppColors.lightGrey)),
+                            Expanded(
+                                child: Divider(color: AppColors.lightGrey)),
                           ],
                         ),
 
@@ -363,7 +365,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         // Facebook Button
                         OutlinedButton.icon(
                           onPressed: () {},
-                          icon: const Icon(Icons.facebook, color: Color(0xFF1877F2)),
+                          icon: const Icon(Icons.facebook,
+                              color: Color(0xFF1877F2)),
                           label: const Text('Continue with Facebook'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,

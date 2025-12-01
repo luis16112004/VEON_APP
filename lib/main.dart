@@ -6,9 +6,11 @@ import 'screens/auth/welcome_screen.dart';
 import 'screens/home/app_shell.dart';
 
 // Imports para la base de datos
+import 'package:firebase_core/firebase_core.dart';
 import 'database/local_storage.dart';
-import 'database/mongo_service.dart';
+import 'database/firebase_service.dart';
 import 'database/sync_service.dart';
+import 'firebase_options.dart';
 
 void main() async {
   // Asegura que los bindings de Flutter estén listos antes de ejecutar código asíncrono.
@@ -20,14 +22,22 @@ void main() async {
   // PASO 1: Iniciar almacenamiento local. Es rápido y no debe fallar.
   await LocalStorage.instance.init();
 
-  // PASO 2: Intentar conectar a MongoDB. No bloquea la app si falla.
+  // PASO 2: Inicializar Firebase con las opciones correctas
   try {
-    await MongoService.instance.connect();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    await FirebaseService.instance.connect();
+
+    if (kDebugMode) {
+      print('✅ Firebase inicializado correctamente');
+    }
   } catch (e) {
     // En modo de depuración, es útil saber por qué falló.
     // En producción, la app simplemente seguirá en modo offline.
     if (kDebugMode) {
-      print('⚠️ MongoDB no disponible al inicio: $e');
+      print('⚠️ Firebase no disponible al inicio: $e');
+      print('💡 Verifica tu configuración de Firebase');
     }
   }
 

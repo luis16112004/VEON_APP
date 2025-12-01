@@ -11,13 +11,11 @@ class AuthService {
     return _instance!;
   }
 
-  static const String _userCollection = 'users'; // Nombre de la colección en MongoDB
+  static const String _userCollection =
+      'users'; // Nombre de la colección en Firestore
 
   // Llave para guardar el ID del usuario logueado localmente
   static const String _loggedInUserIdKey = 'current_user_id';
-  // Llave en LocalStorage (caja 'local_data') para guardar el usuario actual
-  static const String _currentUserKey = '${_userCollection}_$_loggedInUserIdKey';
-
 
   // ==================== 1. REGISTRO ====================
 
@@ -25,19 +23,21 @@ class AuthService {
   Future<UserModel?> register({
     required String name,
     required String email,
-    required String password, // Opcional: podrías hashear la contraseña antes de guardar
+    required String
+        password, // Opcional: podrías hashear la contraseña antes de guardar
   }) async {
     // Aquí puedes añadir validaciones adicionales (ej. si el email ya existe)
 
     final newUser = UserModel(
-      // Generar un ID temporal hasta que MongoDB lo confirme (SyncService se encarga de esto)
+      // Generar un ID temporal hasta que Firebase lo confirme (SyncService se encarga de esto)
       id: const Uuid().v4(),
       name: name,
       email: email,
     );
 
     final userData = newUser.toJson();
-    userData['password'] = password; // Se guarda el password (sin hashear por simplicidad)
+    userData['password'] =
+        password; // Se guarda el password (sin hashear por simplicidad)
 
     // Usar el SyncService para guardar
     final success = await SyncService.instance.saveDocument(
@@ -48,7 +48,8 @@ class AuthService {
 
     if (success) {
       // 2. Guardar el usuario logueado localmente para acceso rápido
-      await LocalStorage.instance.saveLocal('app_settings', _loggedInUserIdKey, {'id': newUser.id, 'name': newUser.name});
+      await LocalStorage.instance.saveLocal('app_settings', _loggedInUserIdKey,
+          {'id': newUser.id, 'name': newUser.name});
 
       // 3. Puedes devolver el modelo para usarlo inmediatamente
       return newUser;
@@ -62,7 +63,8 @@ class AuthService {
   /// Obtiene el usuario actualmente logueado (desde la base de datos local)
   UserModel? getCurrentUser() {
     // 1. Intentar obtener el ID del usuario logueado de los settings
-    final settings = LocalStorage.instance.getLocal('app_settings', _loggedInUserIdKey);
+    final settings =
+        LocalStorage.instance.getLocal('app_settings', _loggedInUserIdKey);
     final userId = settings?['id'];
 
     if (userId == null) return null;

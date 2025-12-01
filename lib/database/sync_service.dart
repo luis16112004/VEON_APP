@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:uuid/uuid.dart';
-import 'mongo_service.dart'; // ✅ Agregar esta importación
+import 'firebase_service.dart'; // ✅ Cambiado de mongo_service a firebase_service
 import 'local_storage.dart';
 
 /// Servicio principal que coordina todo
-/// Decide si guardar en MongoDB, localmente, o ambos
+/// Decide si guardar en Firebase Firestore, localmente, o ambos
 class SyncService {
   static SyncService? _instance;
   final _connectivity = Connectivity();
@@ -36,7 +36,8 @@ class SyncService {
     debugPrint(_isOnline ? '🌐 HAY internet' : '📵 SIN internet');
 
     // Escuchar cambios en la conexión
-    _connectivitySubscription = _connectivity.onConnectivityChanged.listen((results) async {
+    _connectivitySubscription =
+        _connectivity.onConnectivityChanged.listen((results) async {
       final wasOffline = !_isOnline;
       _isOnline = !results.contains(ConnectivityResult.none);
 
@@ -75,10 +76,10 @@ class SyncService {
   /// 📝 GUARDAR un documento nuevo
   /// Funciona CON o SIN internet
   Future<bool> saveDocument(
-      String collection,
-      Map<String, dynamic> data, {
-        String? id,
-      }) async {
+    String collection,
+    Map<String, dynamic> data, {
+    String? id,
+  }) async {
     try {
       // 1. Generar ID único si no existe
       final docId = id ?? const Uuid().v4();
@@ -92,23 +93,24 @@ class SyncService {
       await LocalStorage.instance.saveLocal(collection, docId, data);
       debugPrint('✅ Guardado localmente');
 
-      // 3. Intentar guardar en MongoDB si hay internet
+      // 3. Intentar guardar en Firebase si hay internet
       if (_isOnline) {
         try {
-          final mongoConnected = await MongoService.instance.isConnected();
-          if (mongoConnected) {
-            final result = await MongoService.instance.insertOne(collection, data);
-            if (result != null) {
-              debugPrint('✅ Guardado en MongoDB exitosamente');
-              return true;
-            }
+          // Intentar guardar directamente (Firestore maneja la conexión)
+          final result =
+              await FirebaseService.instance.insertOne(collection, data);
+          if (result != null) {
+            debugPrint('✅ Guardado en Firebase exitosamente');
+            return true;
           }
         } catch (e) {
-          debugPrint('⚠️ Error guardando en MongoDB: $e');
+          debugPrint('⚠️ Error guardando en Firebase: $e');
+          debugPrint(
+              '💡 El documento se guardará localmente y se sincronizará después');
         }
       }
 
-      // 4. Si no se pudo guardar en MongoDB, agregar a cola de sincronización
+      // 4. Si no se pudo guardar en Firebase, agregar a cola de sincronización
       await LocalStorage.instance.addPendingSync(
         operation: 'insert',
         collection: collection,
@@ -116,9 +118,9 @@ class SyncService {
         documentId: docId,
       );
 
-      debugPrint('💾 Documento guardado localmente. Se sincronizará cuando haya internet.');
+      debugPrint(
+          '💾 Documento guardado localmente. Se sincronizará cuando haya internet.');
       return true;
-
     } catch (e) {
       debugPrint('❌ Error guardando documento: $e');
       return false;
@@ -129,10 +131,10 @@ class SyncService {
 
   /// ✏️ ACTUALIZAR un documento existente
   Future<bool> updateDocument(
-      String collection,
-      String id,
-      Map<String, dynamic> data,
-      ) async {
+    String collection,
+    String id,
+    Map<String, dynamic> data,
+  ) async {
     try {
       data['_id'] = id;
       data['updatedAt'] = DateTime.now().toIso8601String();
@@ -143,19 +145,19 @@ class SyncService {
       await LocalStorage.instance.saveLocal(collection, id, data);
       debugPrint('✅ Actualizado localmente');
 
-      // 2. Intentar actualizar en MongoDB si hay internet
+      // 2. Intentar actualizar en Firebase si hay internet
       if (_isOnline) {
         try {
-          final mongoConnected = await MongoService.instance.isConnected();
-          if (mongoConnected) {
-            final success = await MongoService.instance.updateOne(collection, id, data);
-            if (success) {
-              debugPrint('✅ Actualizado en MongoDB exitosamente');
-              return true;
-            }
+          final success =
+              await FirebaseService.instance.updateOne(collection, id, data);
+          if (success) {
+            debugPrint('✅ Actualizado en Firebase exitosamente');
+            return true;
           }
         } catch (e) {
-          debugPrint('⚠️ Error actualizando en MongoDB: $e');
+          debugPrint('⚠️ Error actualizando en Firebase: $e');
+          debugPrint(
+              '💡 El documento se guardará localmente y se sincronizará después');
         }
       }
 
@@ -167,9 +169,9 @@ class SyncService {
         documentId: id,
       );
 
-      debugPrint('💾 Documento actualizado localmente. Se sincronizará cuando haya internet.');
+      debugPrint(
+          '💾 Documento actualizado localmente. Se sincronizará cuando haya internet.');
       return true;
-
     } catch (e) {
       debugPrint('❌ Error actualizando documento: $e');
       return false;
@@ -187,19 +189,19 @@ class SyncService {
       await LocalStorage.instance.deleteLocal(collection, id);
       debugPrint('✅ Eliminado localmente');
 
-      // 2. Intentar eliminar en MongoDB si hay internet
+      // 2. Intentar eliminar en Firebase si hay internet
       if (_isOnline) {
         try {
-          final mongoConnected = await MongoService.instance.isConnected();
-          if (mongoConnected) {
-            final success = await MongoService.instance.deleteOne(collection, id);
-            if (success) {
-              debugPrint('✅ Eliminado de MongoDB exitosamente');
-              return true;
-            }
+          final success =
+              await FirebaseService.instance.deleteOne(collection, id);
+          if (success) {
+            debugPrint('✅ Eliminado de Firebase exitosamente');
+            return true;
           }
         } catch (e) {
-          debugPrint('⚠️ Error eliminando en MongoDB: $e');
+          debugPrint('⚠️ Error eliminando en Firebase: $e');
+          debugPrint(
+              '💡 El documento se guardará localmente y se sincronizará después');
         }
       }
 
@@ -211,9 +213,9 @@ class SyncService {
         documentId: id,
       );
 
-      debugPrint('💾 Documento eliminado localmente. Se sincronizará cuando haya internet.');
+      debugPrint(
+          '💾 Documento eliminado localmente. Se sincronizará cuando haya internet.');
       return true;
-
     } catch (e) {
       debugPrint('❌ Error eliminando documento: $e');
       return false;
@@ -223,57 +225,64 @@ class SyncService {
   // ==================== LEER DATOS ====================
 
   /// 🔍 OBTENER todos los documentos de una colección
-  /// Primero intenta desde MongoDB, si no hay internet usa datos locales
+  /// Primero intenta desde Firebase, si no hay internet usa datos locales
   Future<List<Map<String, dynamic>>> getDocuments(String collection) async {
     debugPrint('🔍 Obteniendo documentos de $collection...');
 
-    // Si hay internet, intentar obtener de MongoDB
+    // Si hay internet, intentar obtener de Firebase
     if (_isOnline) {
       try {
-        final mongoConnected = await MongoService.instance.isConnected();
-        if (mongoConnected) {
-          final mongoData = await MongoService.instance.find(collection);
+        final firebaseConnected = await FirebaseService.instance.isConnected();
+        if (firebaseConnected) {
+          final firebaseData = await FirebaseService.instance.find(collection);
 
-          if (mongoData.isNotEmpty) {
-            // Actualizar datos locales con los de MongoDB
-            for (var doc in mongoData) {
-              await LocalStorage.instance.saveLocal(
-                collection,
-                doc['_id'].toString(),
-                doc,
-              );
+          if (firebaseData.isNotEmpty) {
+            // Actualizar datos locales con los de Firebase
+            for (var doc in firebaseData) {
+              final docId = doc['_id']?.toString() ?? doc['id']?.toString();
+              if (docId != null) {
+                await LocalStorage.instance.saveLocal(
+                  collection,
+                  docId,
+                  doc,
+                );
+              }
             }
-            debugPrint('✅ Obtenidos ${mongoData.length} documentos desde MongoDB');
-            return mongoData;
+            debugPrint(
+                '✅ Obtenidos ${firebaseData.length} documentos desde Firebase');
+            return firebaseData;
           }
         }
       } catch (e) {
-        debugPrint('⚠️ Error obteniendo desde MongoDB: $e');
+        debugPrint('⚠️ Error obteniendo desde Firebase: $e');
       }
     }
 
     // Usar datos locales
     final localData = LocalStorage.instance.getAllLocal(collection);
-    debugPrint('📱 Obtenidos ${localData.length} documentos desde almacenamiento local');
+    debugPrint(
+        '📱 Obtenidos ${localData.length} documentos desde almacenamiento local');
     return localData;
   }
 
   /// 🔍 OBTENER UN documento por ID
-  Future<Map<String, dynamic>?> getDocument(String collection, String id) async {
-    // Si hay internet, intentar obtener de MongoDB
+  Future<Map<String, dynamic>?> getDocument(
+      String collection, String id) async {
+    // Si hay internet, intentar obtener de Firebase
     if (_isOnline) {
       try {
-        final mongoConnected = await MongoService.instance.isConnected();
-        if (mongoConnected) {
-          final doc = await MongoService.instance.findById(collection, id);
+        final firebaseConnected = await FirebaseService.instance.isConnected();
+        if (firebaseConnected) {
+          final doc = await FirebaseService.instance.findById(collection, id);
           if (doc != null) {
             // Actualizar localmente
-            await LocalStorage.instance.saveLocal(collection, id, doc);
+            final docId = doc['_id']?.toString() ?? doc['id']?.toString() ?? id;
+            await LocalStorage.instance.saveLocal(collection, docId, doc);
             return doc;
           }
         }
       } catch (e) {
-        debugPrint('⚠️ Error obteniendo desde MongoDB: $e');
+        debugPrint('⚠️ Error obteniendo desde Firebase: $e');
       }
     }
 
@@ -283,7 +292,7 @@ class SyncService {
 
   // ==================== SINCRONIZACIÓN ====================
 
-  /// 🔄 SINCRONIZAR operaciones pendientes con MongoDB
+  /// 🔄 SINCRONIZAR operaciones pendientes con Firebase
   /// Se ejecuta automáticamente cuando vuelve el internet
   Future<void> syncPendingOperations() async {
     if (_isSyncing) {
@@ -300,10 +309,10 @@ class SyncService {
     debugPrint('🔄 Iniciando sincronización de operaciones pendientes...');
 
     try {
-      // Verificar conexión a MongoDB
-      final mongoConnected = await MongoService.instance.isConnected();
-      if (!mongoConnected) {
-        debugPrint('⚠️ MongoDB no está conectado, cancelando sincronización');
+      // Verificar conexión a Firebase
+      final firebaseConnected = await FirebaseService.instance.isConnected();
+      if (!firebaseConnected) {
+        debugPrint('⚠️ Firebase no está conectado, cancelando sincronización');
         _isSyncing = false;
         return;
       }
@@ -333,19 +342,22 @@ class SyncService {
 
           switch (operation) {
             case 'insert':
-              final result = await MongoService.instance.insertOne(collection, data);
+              final result =
+                  await FirebaseService.instance.insertOne(collection, data);
               success = result != null;
               break;
 
             case 'update':
               if (docId != null) {
-                success = await MongoService.instance.updateOne(collection, docId, data);
+                success = await FirebaseService.instance
+                    .updateOne(collection, docId, data);
               }
               break;
 
             case 'delete':
               if (docId != null) {
-                success = await MongoService.instance.deleteOne(collection, docId);
+                success =
+                    await FirebaseService.instance.deleteOne(collection, docId);
               }
               break;
           }
@@ -358,7 +370,6 @@ class SyncService {
             errorCount++;
             debugPrint('❌ Error sincronizando: $operation en $collection');
           }
-
         } catch (e) {
           errorCount++;
           debugPrint('❌ Error sincronizando operación: $e');
@@ -371,7 +382,6 @@ class SyncService {
 
       // Limpiar operaciones antiguas
       await LocalStorage.instance.cleanOldSyncedOperations();
-
     } catch (e) {
       debugPrint('❌ Error general en sincronización: $e');
     } finally {

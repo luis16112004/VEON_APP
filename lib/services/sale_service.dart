@@ -1,9 +1,7 @@
 // lib/services/sale_service.dart
 
 import '../models/sale_model.dart';
-import '../models/product.dart'; // Importante tener el modelo de Product
 import '../database/local_storage.dart';
-import '../database/mongo_service.dart';
 import '../database/sync_service.dart';
 import 'product_service.dart';
 
@@ -12,8 +10,6 @@ class SaleService {
   factory SaleService() => _instance;
   SaleService._internal();
 
-  final _localStorage = LocalStorage.instance;
-  final _mongoService = MongoService.instance;
   final _syncService = SyncService.instance;
   final _productService = ProductService();
 
@@ -35,29 +31,26 @@ class SaleService {
       }
 
       // PASO 2: Guardar localmente
-      await LocalStorage.instance.saveLocal(_collectionName, sale.id, sale.toMap());
+      await LocalStorage.instance
+          .saveLocal(_collectionName, sale.id, sale.toMap());
       print('✅ Venta guardada localmente');
 
       // PASO 3: Actualizar inventario
       await _updateInventoryForSale(sale);
       print('✅ Inventario actualizado');
 
-      // PASO 4: Sincronizar
+      // PASO 4: Sincronizar usando SyncService (maneja Firebase automáticamente)
+      await _syncService.saveDocument(_collectionName, sale.toMap(),
+          id: sale.id);
+      print('✅ Venta guardada y sincronizada');
+
+      // Marcar como sincronizada si está online
       if (_syncService.isOnline) {
-        await _mongoService.insertOne(_collectionName, sale.toMap());
-        print('✅ Venta sincronizada con MongoDB');
         return sale.copyWith(synced: true);
       } else {
-        await LocalStorage.instance.addPendingSync(
-          operation: 'insert',
-          collection: _collectionName,
-          data: sale.toMap(),
-          documentId: sale.id,
-        );
         print('📦 Venta en cola de sincronización');
+        return sale;
       }
-
-      return sale;
     } catch (e) {
       print('❌ Error creando venta: $e');
       rethrow;
@@ -93,7 +86,6 @@ class SaleService {
       for (var item in sale.items) {
         final product = await _productService.getProductById(item.productId);
         if (product != null) {
-
           // ========= 👇 CORRECCIÓN 1 AQUÍ 👇 =========
           // Si product.unit es nulo, usamos 'item.unit' como respaldo seguro.
           final quantityInBaseUnit = _convertToBaseUnit(
@@ -143,7 +135,8 @@ class SaleService {
         await _productService.updateProduct(updatedProduct);
 
         // Usamos '??' para los prints por seguridad, aunque el error principal ya está corregido.
-        print('   📦 Stock actualizado: ${product.name} -> $newStock ${product.unit ?? 'unidades'}');
+        print(
+            '   📦 Stock actualizado: ${product.name} -> $newStock ${product.unit ?? 'unidades'}');
       } catch (e) {
         print('   ⚠️ Error actualizando stock de ${item.productName}: $e');
       }

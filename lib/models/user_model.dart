@@ -1,7 +1,7 @@
 // user_model.dart
 
 class UserModel {
-  final String id; // El _id de MongoDB
+  final String id; // El ID del documento en Firestore
   final String name; // Necesitas este campo para el Home
   final String email;
   final String? createdAt;
@@ -13,7 +13,7 @@ class UserModel {
     this.createdAt,
   });
 
-  // Convertir el modelo a un Map para guardar en Hive/Mongo
+  // Convertir el modelo a un Map para guardar en Hive/Firestore
   Map<String, dynamic> toJson() {
     return {
       '_id': id,

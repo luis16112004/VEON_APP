@@ -2,8 +2,6 @@
 
 import '../models/quotation_model.dart';
 import '../models/sale_model.dart';
-import '../database/local_storage.dart';
-import '../database/mongo_service.dart';
 import '../database/sync_service.dart';
 import 'sale_service.dart';
 
@@ -12,8 +10,6 @@ class QuotationService {
   factory QuotationService() => _instance;
   QuotationService._internal();
 
-  final _localStorage = LocalStorage.instance;
-  final _mongoService = MongoService.instance;
   final _syncService = SyncService.instance;
   final _saleService = SaleService();
 
@@ -26,34 +22,18 @@ class QuotationService {
     print('📝 Creando cotización: ${quotation.id}');
 
     try {
-      // Guardar localmente (esto ya lo hacías bien)
-      // await _localStorage.saveQuotation(quotation);
-      print('✅ Cotización guardada localmente');
+      // Guardar usando SyncService (maneja Firebase automáticamente)
+      await _syncService.saveDocument(_collectionName, quotation.toMap(),
+          id: quotation.id);
+      print('✅ Cotización guardada y sincronizada');
 
-      // Intentar guardar en MongoDB
-      try {
-        if (_syncService.isOnline) {
-          // CORRECCIÓN 1: De 'insertDocument' a 'insertOne'
-          await _mongoService.insertOne(_collectionName, quotation.toMap());
-          final syncedQuotation = quotation.copyWith(synced: true);
-          // await _localStorage.saveQuotation(syncedQuotation);
-          print('✅ Cotización sincronizada con MongoDB');
-          return syncedQuotation;
-        } else {
-          // CORRECCIÓN 2: De 'addPendingOperation' a 'addPendingSync' en LocalStorage
-          await LocalStorage.instance.addPendingSync(
-            operation: 'insert',
-            collection: _collectionName,
-            data: quotation.toMap(),
-            documentId: quotation.id,
-          );
-          print('📦 Cotización en cola de sincronización');
-        }
-      } catch (e) {
-        print('⚠️ Error sincronizando con MongoDB: $e');
+      // Marcar como sincronizada si está online
+      if (_syncService.isOnline) {
+        return quotation.copyWith(synced: true);
+      } else {
+        print('📦 Cotización en cola de sincronización');
+        return quotation;
       }
-
-      return quotation;
     } catch (e) {
       print('❌ Error creando cotización: $e');
       rethrow;
@@ -65,26 +45,8 @@ class QuotationService {
   /// Obtener todas las cotizaciones
   Future<List<Quotation>> getAllQuotations() async {
     try {
-      if (_syncService.isOnline) {
-        try {
-          // CORRECCIÓN 3: De 'getAllDocuments' a 'find'
-          final docs = await _mongoService.find(_collectionName);
-          final quotations = docs.map((doc) => Quotation.fromMap(doc)).toList();
-
-          // Actualizar cache local
-          for (var quotation in quotations) {
-            // await _localStorage.saveQuotation(quotation.copyWith(synced: true));
-          }
-
-          return quotations;
-        } catch (e) {
-          print('⚠️ Error obteniendo cotizaciones de MongoDB: $e');
-        }
-      }
-
-      // Suponiendo que tienes un método así en LocalStorage
-      // return await _localStorage.getAllQuotations();
-      return []; // Placeholder si el método anterior no existe
+      final docs = await _syncService.getDocuments(_collectionName);
+      return docs.map((doc) => Quotation.fromMap(doc)).toList();
     } catch (e) {
       print('❌ Error obteniendo cotizaciones: $e');
       return [];
@@ -94,21 +56,8 @@ class QuotationService {
   /// Obtener cotización por ID
   Future<Quotation?> getQuotationById(String id) async {
     try {
-      // Suponiendo que tienes este método en LocalStorage
-      // final localQuotation = await _localStorage.getQuotationById(id);
-      // if (localQuotation != null) return localQuotation;
-
-      if (_syncService.isOnline) {
-        // CORRECCIÓN 4: De 'getDocumentById' a 'findById'
-        final doc = await _mongoService.findById(_collectionName, id);
-        if (doc != null) {
-          final quotation = Quotation.fromMap(doc);
-          // await _localStorage.saveQuotation(quotation);
-          return quotation;
-        }
-      }
-
-      return null;
+      final doc = await _syncService.getDocument(_collectionName, id);
+      return doc != null ? Quotation.fromMap(doc) : null;
     } catch (e) {
       print('❌ Error obteniendo cotización: $e');
       return null;
@@ -154,7 +103,6 @@ class QuotationService {
     }
   }
 
-
   // ==================== UPDATE ====================
 
   /// Actualizar cotización
@@ -165,26 +113,12 @@ class QuotationService {
         synced: false,
       );
 
-      // await _localStorage.saveQuotation(updatedQuotation);
-
-      if (_syncService.isOnline) {
-        // CORRECCIÓN 5: De 'updateDocument' a 'updateOne'
-        await _mongoService.updateOne(
-          _collectionName,
-          quotation.id,
-          updatedQuotation.toMap(),
-        );
-        final syncedQuotation = updatedQuotation.copyWith(synced: true);
-        // await _localStorage.saveQuotation(syncedQuotation);
-      } else {
-        // CORRECCIÓN 6: De 'addPendingOperation' a 'addPendingSync' en LocalStorage
-        await LocalStorage.instance.addPendingSync(
-          operation: 'update',
-          collection: _collectionName,
-          data: updatedQuotation.toMap(),
-          documentId: quotation.id,
-        );
-      }
+      // Actualizar usando SyncService (maneja Firebase automáticamente)
+      await _syncService.updateDocument(
+        _collectionName,
+        quotation.id,
+        updatedQuotation.toMap(),
+      );
 
       print('✅ Cotización actualizada');
     } catch (e) {
@@ -251,8 +185,8 @@ class QuotationService {
       if (!quotation.canConvert) {
         throw Exception(
           'La cotización no puede ser convertida. '
-              'Estado: ${quotation.status.displayName}, '
-              'Vencida: ${quotation.isExpired}',
+          'Estado: ${quotation.status.displayName}, '
+          'Vencida: ${quotation.isExpired}',
         );
       }
 
@@ -309,27 +243,12 @@ class QuotationService {
     }
   }
 
-
   // ==================== DELETE ====================
 
   /// Eliminar cotización
   Future<void> deleteQuotation(String id) async {
     try {
-      // await _localStorage.deleteQuotation(id);
-
-      if (_syncService.isOnline) {
-        // CORRECCIÓN 7: De 'deleteDocument' a 'deleteOne'
-        await _mongoService.deleteOne(_collectionName, id);
-      } else {
-        // CORRECCIÓN 8: De 'addPendingOperation' a 'addPendingSync' en LocalStorage
-        await LocalStorage.instance.addPendingSync(
-          operation: 'delete',
-          collection: _collectionName,
-          data: {'id': id},
-          documentId: id,
-        );
-      }
-
+      await _syncService.deleteDocument(_collectionName, id);
       print('✅ Cotización eliminada');
     } catch (e) {
       print('❌ Error eliminando cotización: $e');
@@ -344,7 +263,8 @@ class QuotationService {
       final allQuotations = await getAllQuotations();
 
       for (var quotation in allQuotations) {
-        if (quotation.status == QuotationStatus.pending && quotation.isExpired) {
+        if (quotation.status == QuotationStatus.pending &&
+            quotation.isExpired) {
           final expiredQuotation = quotation.copyWith(
             status: QuotationStatus.expired,
           );
@@ -403,5 +323,4 @@ class QuotationService {
       };
     }
   }
-
 }

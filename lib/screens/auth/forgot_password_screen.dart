@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:veon_app/screens/auth/constants/colors.dart';
 
-// Importa la pantalla de Login para poder regresar
-import 'login_screen.dart';
-
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -60,7 +57,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-
                 // 1. LOGO (AFUERA DE LA TARJETA)
                 Image.asset(
                   'assets/images/veon_logo_color.png',
@@ -83,7 +79,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-
                         // Title
                         const Text(
                           'Forgot Password',
@@ -181,20 +176,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ),
                             child: _isLoading
                                 ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
                                 : const Text(
-                              'Reset Password',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                                    'Reset Password',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                           ),
                         ),
 
@@ -203,7 +198,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         // Divider
                         const Row(
                           children: [
-                            Expanded(child: Divider(color: AppColors.lightGrey)),
+                            Expanded(
+                                child: Divider(color: AppColors.lightGrey)),
                             Padding(
                               padding: EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
@@ -214,7 +210,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 ),
                               ),
                             ),
-                            Expanded(child: Divider(color: AppColors.lightGrey)),
+                            Expanded(
+                                child: Divider(color: AppColors.lightGrey)),
                           ],
                         ),
 
@@ -244,7 +241,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         // Facebook Button
                         OutlinedButton.icon(
                           onPressed: () {},
-                          icon: const Icon(Icons.facebook, color: Color(0xFF1877F2)),
+                          icon: const Icon(Icons.facebook,
+                              color: Color(0xFF1877F2)),
                           label: const Text('Continue with Facebook'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
