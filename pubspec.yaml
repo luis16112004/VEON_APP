@@ -23,12 +23,18 @@ dependencies:
   cloud_firestore: ^5.4.4
   firebase_auth: ^5.3.1
 
+  # Para autenticación con Google
+  google_sign_in: ^6.2.1
+
   # Para guardar datos localmente (sin internet)
   hive: ^2.2.3
   hive_flutter: ^1.1.0
 
   # Para detectar si hay conexión a internet
   connectivity_plus: ^6.0.5
+
+  # Para gráficas y visualización de datos
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:

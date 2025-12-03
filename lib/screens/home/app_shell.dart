@@ -4,6 +4,8 @@ import 'package:veon_app/screens/auth/dashboard/home_screen.dart';
 import 'package:veon_app/screens/clients/clients_list_screen.dart';
 import 'package:veon_app/screens/products/products_list_screen.dart';
 import 'package:veon_app/screens/providers/providers_list_screen.dart';
+import 'package:veon_app/screens/sales/sales_list_screen.dart';
+import 'package:veon_app/screens/quotations/quotations_list_screen.dart';
 import 'package:veon_app/screens/profile/user_profile_screen.dart';
 
 class AppShell extends StatefulWidget {
@@ -28,6 +30,8 @@ class _AppShellState extends State<AppShell> {
       ),
       const ClientsListScreen(),
       const ProductsListScreen(),
+      const SalesListScreen(),
+      const QuotationsListScreen(),
       const ProvidersListScreen(),
     ];
   }
@@ -36,7 +40,10 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.black,
-      body: _pages[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppColors.black,
@@ -52,8 +59,8 @@ class _AppShellState extends State<AppShell> {
           type: BottomNavigationBarType.fixed,
           currentIndex: _currentIndex,
           onTap: (i) {
-            if (i == 4) {
-              // Profile item
+            if (i == 6) {
+              // Profile item - navegar a pantalla separada
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -67,25 +74,40 @@ class _AppShellState extends State<AppShell> {
           backgroundColor: AppColors.black,
           selectedItemColor: AppColors.primaryGreen,
           unselectedItemColor: AppColors.grey,
-          items: [
-            const BottomNavigationBarItem(
+          selectedFontSize: 12,
+          unselectedFontSize: 12,
+          items: const [
+            BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined),
               activeIcon: Icon(Icons.dashboard),
               label: 'Dashboard',
             ),
-            const BottomNavigationBarItem(
+            BottomNavigationBarItem(
               icon: Icon(Icons.group_outlined),
+              activeIcon: Icon(Icons.group),
               label: 'Clients',
             ),
-            const BottomNavigationBarItem(
+            BottomNavigationBarItem(
               icon: Icon(Icons.inventory_2_outlined),
+              activeIcon: Icon(Icons.inventory_2),
               label: 'Products',
             ),
-            const BottomNavigationBarItem(
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shopping_bag_outlined),
+              activeIcon: Icon(Icons.shopping_bag),
+              label: 'Sales',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.description_outlined),
+              activeIcon: Icon(Icons.description),
+              label: 'Quotations',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.local_shipping_outlined),
+              activeIcon: Icon(Icons.local_shipping),
               label: 'Providers',
             ),
-            const BottomNavigationBarItem(
+            BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
               activeIcon: Icon(Icons.person),
               label: 'Profile',

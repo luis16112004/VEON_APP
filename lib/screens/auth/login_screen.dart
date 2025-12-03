@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:veon_app/screens/auth/constants/colors.dart';
 import 'package:veon_app/screens/home/app_shell.dart';
+import 'package:veon_app/services/auth_service.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 
@@ -26,8 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// Maneja el proceso de login
-  /// Navega directamente a AppShell (que contiene el navbar) después del login exitoso
+  /// Maneja el proceso de login con Firebase Auth
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -38,19 +38,48 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Simula la espera de autenticación (2 segundos)
-      await Future.delayed(const Duration(seconds: 2));
+      await AuthService.instance.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
-      // Navega directamente a AppShell que contiene el navbar
+      // Navegar a la app principal
       if (mounted) {
         Navigator.of(context).pushReplacementNamed(AppShell.route);
       }
     } catch (e) {
-      // Manejo de errores en caso de fallo en la autenticación
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login failed: ${e.toString()}'),
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Maneja el login con Google
+  Future<void> _handleGoogleLogin() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await AuthService.instance.signInWithGoogle();
+
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed(AppShell.route);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al iniciar sesión con Google: ${e.toString()}'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -67,7 +96,6 @@ class _LoginScreenState extends State<LoginScreen> {
       return 'Please enter your email';
     }
     
-    // Validación más robusta de email
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(value)) {
       return 'Please enter a valid email';
@@ -80,21 +108,6 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter your password';
-    }
-    if (value.length < 8) {
-      return 'Password must be at least 8 characters';
-    }
-    // Check for at least one letter
-    if (!RegExp(r'[a-zA-Z]').hasMatch(value)) {
-      return 'Password must contain at least one letter';
-    }
-    // Check for at least one number
-    if (!RegExp(r'[0-9]').hasMatch(value)) {
-      return 'Password must contain at least one number';
-    }
-    // Check for at least one special character
-    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
-      return 'Password must contain at least one special character';
     }
     return null;
   }
@@ -446,16 +459,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Google Button
                     OutlinedButton.icon(
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              // TODO: Implementar autenticación con Google
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Google login coming soon'),
-                                ),
-                              );
-                            },
+                      onPressed: _isLoading ? null : _handleGoogleLogin,
                       icon: Image.network(
                         'https://www.google.com/favicon.ico',
                         width: 18,
@@ -481,12 +485,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 12),
 
-                    // Facebook Button
+                    // Facebook Button (TODO: Implementar más adelante)
                     OutlinedButton.icon(
                       onPressed: _isLoading
                           ? null
                           : () {
-                              // TODO: Implementar autenticación con Facebook
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Facebook login coming soon'),

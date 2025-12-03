@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:veon_app/screens/auth/constants/colors.dart';
 import 'package:veon_app/services/auth_service.dart';
+import 'package:veon_app/screens/home/app_shell.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -26,42 +27,72 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _handleRegister() async {
-    // HACER ASÍNCRONA PARA LLAMAR AL SERVICIO
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
-      // --- 1. LLAMADA AL SERVICIO DE AUTENTICACIÓN ---
-      final user = await AuthService.instance.register(
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      try {
+        final user = await AuthService.instance.register(
+          name: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
 
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (user != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Account created successfully for ${user.name}!'),
+              backgroundColor: AppColors.primaryGreen,
+            ),
+          );
+          // Navegar a la app principal
+          Navigator.of(context).pushReplacementNamed('/app');
+        }
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceFirst('Exception: ', '')),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  /// Maneja el registro con Google
+  Future<void> _handleGoogleRegister() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await AuthService.instance.signInWithGoogle();
+
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/app');
+      }
+    } catch (e) {
       setState(() {
         _isLoading = false;
       });
-
-      // --- 2. MANEJO DE RESULTADOS ---
-      if (user != null) {
-        // Registro exitoso
+      
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Account created successfully for ${user.name}!'),
-            backgroundColor: AppColors.primaryGreen,
-          ),
-        );
-        // Navegar al Home (reemplaza la pantalla actual)
-        // Asegúrate de que '/home' sea la ruta correcta para tu pantalla principal
-        Navigator.pushReplacementNamed(context, '/home');
-      } else {
-        // Registro fallido (ej. error de conexión o Firebase)
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Registration failed. Check your connection or try again.'),
-            backgroundColor: Colors.red,
+            content: Text('Error al registrarse con Google: ${e.toString()}'),
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -343,7 +374,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                         // Google Button
                         OutlinedButton.icon(
-                          onPressed: () {},
+                          onPressed: _isLoading ? null : _handleGoogleRegister,
                           icon: Image.network(
                             'https://www.google.com/favicon.ico',
                             width: 18,
