@@ -445,6 +445,7 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
     Product? selectedProduct;
     double quantity = 1.0;
     final quantityController = TextEditingController(text: '1');
+    final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
@@ -452,51 +453,95 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Agregar Producto'),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<Product>(
-                  value: selectedProduct,
-                  decoration: const InputDecoration(
-                    labelText: 'Producto',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _products.map((product) {
-                    return DropdownMenuItem(
-                      value: product,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(product.name),
-                          Text(
-                            'Stock: ${product.stock} ${product.unit}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<Product>(
+                    value: selectedProduct,
+                    decoration: const InputDecoration(
+                      labelText: 'Producto',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _products.map((product) {
+                      return DropdownMenuItem(
+                        value: product,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(product.name),
+                            Text(
+                              'Stock: ${product.stock} ${product.unit ?? 'unidades'}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: product.stock > 0 ? Colors.grey[600] : Colors.red,
+                                fontWeight: product.stock == 0 ? FontWeight.bold : FontWeight.normal,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (product) {
-                    setDialogState(() => selectedProduct = product);
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: quantityController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Cantidad',
-                    border: OutlineInputBorder(),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (product) {
+                      setDialogState(() {
+                        selectedProduct = product;
+                        // Validar cantidad cuando se selecciona un producto
+                        if (product != null && quantity > product.stock) {
+                          quantityController.text = product.stock.toString();
+                          quantity = product.stock.toDouble();
+                        }
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null) {
+                        return 'Por favor selecciona un producto';
+                      }
+                      if (value.stock <= 0) {
+                        return 'Este producto no tiene stock disponible';
+                      }
+                      return null;
+                    },
                   ),
-                  onChanged: (value) {
-                    quantity = double.tryParse(value) ?? 1.0;
-                  },
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: quantityController,
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Cantidad',
+                      border: const OutlineInputBorder(),
+                      helperText: selectedProduct != null
+                          ? 'Stock disponible: ${selectedProduct!.stock} ${selectedProduct!.unit ?? 'unidades'}'
+                          : null,
+                      errorMaxLines: 3,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor ingresa una cantidad';
+                      }
+                      final qty = double.tryParse(value);
+                      if (qty == null || qty <= 0) {
+                        return 'La cantidad debe ser mayor a 0';
+                      }
+                      if (selectedProduct != null && qty > selectedProduct!.stock) {
+                        return 'La cantidad (${qty.toStringAsFixed(2)}) excede el stock disponible (${selectedProduct!.stock})';
+                      }
+                      return null;
+                    },
+                    onChanged: (value) {
+                      final qty = double.tryParse(value) ?? 0.0;
+                      setDialogState(() {
+                        quantity = qty;
+                        // Validar en tiempo real
+                        if (selectedProduct != null && qty > selectedProduct!.stock) {
+                          formKey.currentState?.validate();
+                        }
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -506,18 +551,33 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                if (selectedProduct != null && quantity > 0) {
-                  final item = SaleItem.create(
-                    productId: selectedProduct!.id,
-                    productName: selectedProduct!.name,
-                    sku: selectedProduct!.sku,
-                    quantity: quantity,
-                    unit: selectedProduct!.id,
-                    unitPrice: selectedProduct!.salePrice,
-                  );
+                if (formKey.currentState!.validate()) {
+                  if (selectedProduct != null && quantity > 0) {
+                    // Validación final antes de agregar
+                    if (quantity > selectedProduct!.stock) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'La cantidad solicitada (${quantity.toStringAsFixed(2)}) excede el stock disponible (${selectedProduct!.stock})'
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
 
-                  setState(() => _items.add(item));
-                  Navigator.pop(context);
+                    final item = SaleItem.create(
+                      productId: selectedProduct!.id,
+                      productName: selectedProduct!.name,
+                      sku: selectedProduct!.sku,
+                      quantity: quantity,
+                      unit: selectedProduct!.unit ?? selectedProduct!.unitOfMeasurement ?? 'unidades',
+                      unitPrice: selectedProduct!.salePrice,
+                    );
+
+                    setState(() => _items.add(item));
+                    Navigator.pop(context);
+                  }
                 }
               },
               child: const Text('Agregar'),

@@ -39,17 +39,18 @@ class Provider {
   }
 
   factory Provider.fromJson(Map<String, dynamic> json) {
+    // Soporta tanto camelCase como snake_case (Laravel)
     return Provider(
-      id: json['id'] as String,
-      companyName: json['companyName'] as String,
-      contactName: json['contactName'] as String,
-      phoneNumber: json['phoneNumber'] as String,
-      email: json['email'] as String,
-      address: json['address'] as String,
-      postalCode: json['postalCode'] as String,
-      country: json['country'] as String,
-      state: json['state'] as String,
-      city: json['city'] as String,
+      id: json['id']?.toString() ?? '',
+      companyName: json['company_name'] ?? json['companyName'] ?? '',
+      contactName: json['contact_name'] ?? json['contactName'] ?? '',
+      phoneNumber: json['phone_number'] ?? json['phoneNumber'] ?? '',
+      email: json['email'] ?? '',
+      address: json['address'] ?? '',
+      postalCode: json['postal_code'] ?? json['postalCode'] ?? '',
+      country: json['country'] ?? '',
+      state: json['state'] ?? '',
+      city: json['city'] ?? '',
     );
   }
 

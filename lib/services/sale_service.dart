@@ -21,13 +21,25 @@ class SaleService {
     print('📝 Creando venta: ${sale.id}');
 
     try {
-      // PASO 1: Validar stock
+      // PASO 1: Validar stock antes de procesar la venta
       for (var item in sale.items) {
         final product = await _productService.getProductById(item.productId);
         if (product == null) {
           throw Exception('Producto no encontrado: ${item.productName}');
         }
-        // ... Lógica de stock (asumiendo que ya funciona)
+        
+        // Convertir cantidad a unidad base del producto
+        final quantityInBaseUnit = _convertToBaseUnit(
+            item.quantity, item.unit, product.unit ?? item.unit);
+        
+        // Validar que el stock disponible sea suficiente
+        if (product.stock < quantityInBaseUnit) {
+          throw Exception(
+            'Stock insuficiente para ${item.productName}. '
+            'Stock disponible: ${product.stock} ${product.unit ?? 'unidades'}, '
+            'Solicitado: ${quantityInBaseUnit.toStringAsFixed(2)} ${product.unit ?? 'unidades'}'
+          );
+        }
       }
 
       // PASO 2: Guardar localmente

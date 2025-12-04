@@ -2,15 +2,17 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
-import '../database/firebase_service.dart';
+import '../config/api_config.dart';
+import 'api_service.dart';
 
-/// Servicio de autenticación usando Firebase Auth
+/// Servicio de autenticación usando Firebase Auth o Laravel API
 /// Maneja login, registro, y autenticación con Google
 class AuthService {
   static AuthService? _instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ApiService _apiService = ApiService();
 
   AuthService._();
 
@@ -34,6 +36,30 @@ class AuthService {
     required String password,
   }) async {
     try {
+      // Si Laravel API está activo, usar Laravel
+      if (ApiConfig.isLaravelEnabled) {
+        final response = await _apiService.register(name, email, password);
+
+        // Crear UserModel desde la respuesta de Laravel
+        final userModel = UserModel(
+          id: response['user']?['id']?.toString() ??
+              response['id']?.toString() ??
+              '',
+          name: response['user']?['name'] ?? response['name'] ?? name,
+          email: response['user']?['email'] ??
+              response['email'] ??
+              email.trim().toLowerCase(),
+          createdAt: response['user']?['created_at'] ??
+              response['created_at'] ??
+              DateTime.now().toIso8601String(),
+        );
+
+        print(
+            '✅ Usuario registrado exitosamente en Laravel: ${userModel.email}');
+        return userModel;
+      }
+
+      // Comportamiento original con Firebase
       // Crear usuario en Firebase Auth (las contraseñas ya están cifradas por Firebase)
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email.trim().toLowerCase(),
@@ -84,6 +110,29 @@ class AuthService {
     required String password,
   }) async {
     try {
+      // Si Laravel API está activo, usar Laravel
+      if (ApiConfig.isLaravelEnabled) {
+        final response = await _apiService.login(email, password);
+
+        // Crear UserModel desde la respuesta de Laravel
+        final userModel = UserModel(
+          id: response['user']?['id']?.toString() ??
+              response['id']?.toString() ??
+              '',
+          name: response['user']?['name'] ?? response['name'] ?? 'Usuario',
+          email: response['user']?['email'] ??
+              response['email'] ??
+              email.trim().toLowerCase(),
+          createdAt: response['user']?['created_at'] ??
+              response['created_at'] ??
+              DateTime.now().toIso8601String(),
+        );
+
+        print('✅ Login exitoso en Laravel: ${userModel.email}');
+        return userModel;
+      }
+
+      // Comportamiento original con Firebase
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: email.trim().toLowerCase(),
         password: password,
@@ -96,7 +145,7 @@ class AuthService {
 
       // Obtener datos del usuario desde Firestore
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
-      
+
       if (userDoc.exists) {
         final userData = userDoc.data()!;
         final userModel = UserModel(
@@ -150,7 +199,8 @@ class AuthService {
       }
 
       // Obtener los detalles de autenticación del usuario
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       // Crear una nueva credencial
       final credential = GoogleAuthProvider.credential(
@@ -258,6 +308,11 @@ class AuthService {
   /// Cerrar sesión
   Future<void> logout() async {
     try {
+      // Limpiar token de Laravel si está activo
+      if (ApiConfig.isLaravelEnabled) {
+        _apiService.clearToken();
+      }
+
       await Future.wait([
         _auth.signOut(),
         _googleSignIn.signOut(),
