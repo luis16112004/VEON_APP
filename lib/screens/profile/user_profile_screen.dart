@@ -1,8 +1,259 @@
 import 'package:flutter/material.dart';
 import 'package:veon_app/screens/auth/constants/colors.dart';
+import 'package:veon_app/services/auth_service.dart';
+import 'package:veon_app/models/user_model.dart';
+import 'package:veon_app/screens/auth/welcome_screen.dart';
 
-class UserProfileScreen extends StatelessWidget {
+class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
+
+  @override
+  State<UserProfileScreen> createState() => _UserProfileScreenState();
+}
+
+class _UserProfileScreenState extends State<UserProfileScreen> {
+  final _authService = AuthService.instance;
+  UserModel? _currentUser;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    setState(() => _isLoading = true);
+    final user = await _authService.getCurrentUser();
+    if (mounted) {
+      setState(() {
+        _currentUser = user;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    try {
+      setState(() => _isLoading = true);
+      await _authService.logout();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cerrar sesión: $e'), backgroundColor: Colors.red),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _showEditProfileDialog() async {
+    if (_currentUser == null) return;
+
+    final nameController = TextEditingController(text: _currentUser!.name);
+    final emailController = TextEditingController(text: _currentUser!.email);
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('Editar Perfil', style: TextStyle(color: Colors.black)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              style: const TextStyle(color: Colors.black),
+              decoration: const InputDecoration(
+                labelText: 'Nombre',
+                labelStyle: TextStyle(color: Colors.black54),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primaryGreen)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              enabled: false, // Deshabilitado como solicitó el usuario
+              style: const TextStyle(color: Colors.grey),
+              decoration: const InputDecoration(
+                labelText: 'Email (No editable)',
+                labelStyle: TextStyle(color: Colors.black54),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primaryGreen)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGreen),
+            onPressed: () async {
+              try {
+                Navigator.pop(context);
+                setState(() => _isLoading = true);
+                await _authService.updateProfile(
+                  name: nameController.text,
+                  email: emailController.text,
+                );
+                await _loadUser();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Perfil actualizado'), backgroundColor: Colors.green),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              } finally {
+                if (mounted) setState(() => _isLoading = false);
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showChangePasswordDialog() async {
+    final currentPassController = TextEditingController();
+    final newPassController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        // CAMBIO: Fondo blanco para que contraste con la letra negra
+        backgroundColor: Colors.white,
+        // CAMBIO: Título en negro
+        title: const Text('Cambiar Contraseña', style: TextStyle(color: Colors.black)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: currentPassController,
+              obscureText: true,
+              // CAMBIO: Letra del input en NEGRO
+              style: const TextStyle(color: Colors.black),
+              decoration: const InputDecoration(
+                labelText: 'Contraseña Actual',
+                // CAMBIO: Label en gris oscuro/negro para que se lea
+                labelStyle: TextStyle(color: Colors.black54),
+                // Borde gris visible en fondo blanco
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primaryGreen)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: newPassController,
+              obscureText: true,
+              // CAMBIO: Letra del input en NEGRO
+              style: const TextStyle(color: Colors.black),
+              decoration: const InputDecoration(
+                labelText: 'Nueva Contraseña',
+                // CAMBIO: Label en gris oscuro/negro
+                labelStyle: TextStyle(color: Colors.black54),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primaryGreen)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryGreen),
+            onPressed: () async {
+              try {
+                Navigator.pop(context);
+                setState(() => _isLoading = true);
+                await _authService.changePassword(
+                  currentPassword: currentPassController.text,
+                  newPassword: newPassController.text,
+                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Contraseña actualizada'), backgroundColor: Colors.green),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              } finally {
+                if (mounted) setState(() => _isLoading = false);
+              }
+            },
+            child: const Text('Cambiar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleDeleteAccount() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2A2A2A),
+        title: const Text('Eliminar Cuenta', style: TextStyle(color: Colors.red)),
+        content: const Text(
+          '¿Estás seguro de que quieres eliminar tu cuenta? Esta acción no se puede deshacer.',
+          style: TextStyle(color: Colors.white),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        setState(() => _isLoading = true);
+        await _authService.deleteAccount();
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error al eliminar cuenta: $e'), backgroundColor: Colors.red),
+          );
+          setState(() => _isLoading = false);
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,137 +271,119 @@ class UserProfileScreen extends StatelessWidget {
           style: TextStyle(color: AppColors.white),
         ),
         centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Image.asset(
-              'assets/images/iconoblanco.png',
-              width: 24,
-              height: 24,
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(
-                  Icons.all_inclusive,
-                  color: AppColors.white,
-                  size: 24,
-                );
-              },
-            ),
-          ),
-        ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              // Profile Picture
-              Stack(
-                children: [
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.primaryGreen,
-                      border: Border.all(
-                        color: AppColors.white,
-                        width: 4,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      size: 60,
-                      color: AppColors.white,
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryGreen,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.black,
-                          width: 2,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen))
+          : SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  children: [
+                    // Profile Picture
+                    Stack(
+                      children: [
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.primaryGreen,
+                            border: Border.all(
+                              color: AppColors.white,
+                              width: 4,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            size: 60,
+                            color: AppColors.white,
+                          ),
                         ),
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        size: 18,
-                        color: AppColors.white,
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryGreen,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.black,
+                                width: 2,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 18,
+                              color: AppColors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+                    Text(
+                      _currentUser?.name ?? 'Usuario',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                ],
+                    Text(
+                      _currentUser?.email ?? '',
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 14,
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Profile Options
+                    _buildProfileOption(
+                      icon: Icons.edit_outlined,
+                      iconColor: AppColors.primaryBlue,
+                      title: 'Edit username',
+                      subtitle: 'Update your personal information',
+                      onTap: _showEditProfileDialog,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    _buildProfileOption(
+                      icon: Icons.lock_outline,
+                      iconColor: AppColors.primaryGreen,
+                      title: 'Change password',
+                      subtitle: 'Update your login password',
+                      onTap: _showChangePasswordDialog,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    _buildProfileOption(
+                      icon: Icons.logout,
+                      iconColor: AppColors.error,
+                      title: 'Sign out / Log out',
+                      subtitle: 'Sign out of your account',
+                      onTap: _handleLogout,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    _buildProfileOption(
+                      icon: Icons.delete_outline,
+                      iconColor: AppColors.error,
+                      title: 'Delete account',
+                      subtitle: 'Permanently delete your account',
+                      onTap: _handleDeleteAccount,
+                    ),
+                  ],
+                ),
               ),
-
-              const SizedBox(height: 32),
-
-              // Profile Options
-              _buildProfileOption(
-                icon: Icons.edit_outlined,
-                iconColor: AppColors.primaryBlue,
-                title: 'Edit username',
-                subtitle: 'Update your personal information',
-                onTap: () {
-                  // Navigate to edit username
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              _buildProfileOption(
-                icon: Icons.refresh,
-                iconColor: AppColors.primaryGreen,
-                title: 'Change password',
-                subtitle: 'Update your login password',
-                onTap: () {
-                  // Navigate to change password
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              _buildProfileOption(
-                icon: Icons.settings_outlined,
-                iconColor: AppColors.grey,
-                title: 'Account settings',
-                subtitle: 'Adjust your preferences',
-                onTap: () {
-                  // Navigate to account settings
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              _buildProfileOption(
-                icon: Icons.logout,
-                iconColor: AppColors.error,
-                title: 'Sign out / Log out',
-                subtitle: 'Sign out of your account',
-                onTap: () {
-                  // Handle sign out
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              _buildProfileOption(
-                icon: Icons.delete_outline,
-                iconColor: AppColors.error,
-                title: 'Delete account',
-                subtitle: 'Permanently delete your account',
-                onTap: () {
-                  // Handle delete account
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 

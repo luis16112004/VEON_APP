@@ -96,6 +96,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'quotations_fab',
         onPressed: () async {
           await Navigator.push(
             context,

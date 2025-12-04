@@ -13,6 +13,9 @@ class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final ApiService _apiService = ApiService();
+  
+  // Variable para almacenar el usuario de Laravel en memoria
+  UserModel? _laravelUser;
 
   AuthService._();
 
@@ -56,6 +59,10 @@ class AuthService {
 
         print(
             '✅ Usuario registrado exitosamente en Laravel: ${userModel.email}');
+        
+        // Guardar usuario en memoria
+        _laravelUser = userModel;
+        
         return userModel;
       }
 
@@ -129,6 +136,10 @@ class AuthService {
         );
 
         print('✅ Login exitoso en Laravel: ${userModel.email}');
+        
+        // Guardar usuario en memoria
+        _laravelUser = userModel;
+        
         return userModel;
       }
 
@@ -262,6 +273,11 @@ class AuthService {
   /// Obtener el usuario actual logueado
   Future<UserModel?> getCurrentUser() async {
     try {
+      // Si Laravel API está activo, devolver usuario en memoria
+      if (ApiConfig.isLaravelEnabled) {
+        return _laravelUser;
+      }
+
       final user = _auth.currentUser;
       if (user == null) {
         return null;
@@ -311,16 +327,121 @@ class AuthService {
       // Limpiar token de Laravel si está activo
       if (ApiConfig.isLaravelEnabled) {
         _apiService.clearToken();
+        _laravelUser = null;
       }
 
-      await Future.wait([
-        _auth.signOut(),
-        _googleSignIn.signOut(),
-      ]);
+      await _auth.signOut();
+      
+      try {
+        await _googleSignIn.signOut();
+      } catch (e) {
+        print('⚠️ Error silencioso al cerrar sesión de Google: $e');
+      }
+
       print('✅ Sesión cerrada exitosamente');
     } catch (e) {
       print('❌ Error al cerrar sesión: $e');
       throw Exception('Error al cerrar sesión: $e');
+    }
+  }
+
+  // ==================== GESTIÓN DE PERFIL ====================
+  
+  /// Actualizar perfil (nombre y email)
+  Future<void> updateProfile({required String name, required String email}) async {
+    try {
+      if (ApiConfig.isLaravelEnabled) {
+        if (_laravelUser == null) throw Exception('Usuario no identificado');
+        
+        // Llamar a updateUser con el ID
+        await _apiService.updateUser(_laravelUser!.id, name, email);
+        
+        // Actualizar usuario en memoria
+        _laravelUser = UserModel(
+          id: _laravelUser!.id,
+          name: name,
+          email: email,
+          createdAt: _laravelUser!.createdAt,
+        );
+      } else {
+        final user = _auth.currentUser;
+        if (user == null) throw Exception('No hay usuario autenticado');
+
+        // Actualizar Firebase Auth
+        if (name != user.displayName) {
+          await user.updateDisplayName(name);
+        }
+        if (email != user.email) {
+          await user.verifyBeforeUpdateEmail(email);
+        }
+        
+        // Actualizar Firestore
+        await _firestore.collection('users').doc(user.uid).update({
+          'name': name,
+          'email': email,
+          'updatedAt': DateTime.now().toIso8601String(),
+        });
+      }
+      print('✅ Perfil actualizado exitosamente');
+    } catch (e) {
+      print('❌ Error actualizando perfil: $e');
+      throw Exception('Error al actualizar perfil: $e');
+    }
+  }
+
+  /// Cambiar contraseña
+  Future<void> changePassword({required String currentPassword, required String newPassword}) async {
+    try {
+      if (ApiConfig.isLaravelEnabled) {
+        await _apiService.changePassword(currentPassword, newPassword);
+      } else {
+        final user = _auth.currentUser;
+        if (user == null) throw Exception('No hay usuario autenticado');
+
+        // Reautenticar para operaciones sensibles
+        final cred = EmailAuthProvider.credential(
+          email: user.email!,
+          password: currentPassword,
+        );
+        await user.reauthenticateWithCredential(cred);
+        
+        await user.updatePassword(newPassword);
+      }
+      print('✅ Contraseña actualizada exitosamente');
+    } on FirebaseAuthException catch (e) {
+      print('❌ Error cambiando contraseña: ${e.code}');
+      throw _handleAuthException(e);
+    } catch (e) {
+      print('❌ Error cambiando contraseña: $e');
+      throw Exception('Error al cambiar contraseña: $e');
+    }
+  }
+
+  /// Eliminar cuenta
+  Future<void> deleteAccount() async {
+    try {
+      if (ApiConfig.isLaravelEnabled) {
+        if (_laravelUser == null) throw Exception('Usuario no identificado');
+        
+        // Llamar a deleteUser con el ID
+        await _apiService.deleteUser(_laravelUser!.id);
+        
+        _laravelUser = null;
+        _apiService.clearToken();
+      } else {
+        final user = _auth.currentUser;
+        if (user == null) throw Exception('No hay usuario autenticado');
+
+        // Eliminar datos de Firestore
+        await _firestore.collection('users').doc(user.uid).delete();
+        
+        // Eliminar usuario de Auth
+        await user.delete();
+      }
+      print('✅ Cuenta eliminada exitosamente');
+    } catch (e) {
+      print('❌ Error eliminando cuenta: $e');
+      throw Exception('Error al eliminar cuenta: $e');
     }
   }
 

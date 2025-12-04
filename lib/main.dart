@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // Para usar kDebugMode
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/theme/app_theme.dart';
 import 'screens/auth/welcome_screen.dart';
@@ -15,6 +16,9 @@ import 'firebase_options.dart';
 void main() async {
   // Asegura que los bindings de Flutter estén listos antes de ejecutar código asíncrono.
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicializar formato de fechas para español
+  await initializeDateFormatting('es');
 
   // --- INICIALIZACIÓN DE SERVICIOS ESENCIALES ---
   // Este bloque se ejecuta una sola vez al iniciar la app.

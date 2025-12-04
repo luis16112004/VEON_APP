@@ -2,12 +2,12 @@
 /// Permite cambiar entre Firebase y Laravel API
 class ApiConfig {
   // URL base de Laravel API
-  static const String laravelBaseUrl = 'http:192.168.3.95:8000/api';
+  static const String laravelBaseUrl = 'http://192.168.3.95:8000/api';
 
   // Toggle para activar/desactivar Laravel API
   // true = usar Laravel API para login, register y providers
   // false = usar Firebase (comportamiento actual)
-  static const bool useLaravelApi = false;
+  static const bool useLaravelApi = true;
 
   // Obtener la URL base según la configuración
   static String get baseUrl => laravelBaseUrl;

@@ -101,6 +101,7 @@ class _SalesListScreenState extends State<SalesListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'sales_fab',
         onPressed: () async {
           await Navigator.push(
             context,
