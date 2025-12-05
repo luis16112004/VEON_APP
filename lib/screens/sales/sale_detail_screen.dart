@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/sale_model.dart';
 import '../../services/sale_service.dart';
+import '../../services/auth_service.dart';
+import '../../services/permission_service.dart';
 
 class SaleDetailScreen extends StatefulWidget {
   final String saleId;
@@ -19,13 +21,24 @@ class SaleDetailScreen extends StatefulWidget {
 
 class _SaleDetailScreenState extends State<SaleDetailScreen> {
   final _saleService = SaleService();
+  final _authService = AuthService.instance;
+  final _permissionService = PermissionService.instance;
   Sale? _sale;
   bool _isLoading = false;
+  bool _canEditSale = false;
 
   @override
   void initState() {
     super.initState();
+    _checkPermissions();
     _loadSale();
+  }
+
+  Future<void> _checkPermissions() async {
+    final user = await _authService.getCurrentUser();
+    setState(() {
+      _canEditSale = _permissionService.canEditSale(user);
+    });
   }
 
   Future<void> _loadSale() async {
@@ -50,7 +63,7 @@ class _SaleDetailScreenState extends State<SaleDetailScreen> {
         backgroundColor: const Color(0xFF1E293B),
         foregroundColor: Colors.white,
         actions: [
-          if (_sale != null && _sale!.status != SaleStatus.cancelled)
+          if (_sale != null && _sale!.status != SaleStatus.cancelled && _canEditSale)
             PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'cancel') {

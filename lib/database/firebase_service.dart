@@ -136,10 +136,10 @@ class FirebaseService {
       Query query = getCollection(collection);
 
       // Filtrar por userId solo si hay usuario autenticado
-      final userId = getCurrentUserId();
-      if (userId != null) {
-        query = query.where('userId', isEqualTo: userId);
-      }
+      // final userId = getCurrentUserId();
+      // if (userId != null) {
+      //   query = query.where('userId', isEqualTo: userId);
+      // }
 
       // Aplicar filtros adicionales si se proporcionan
       if (filter != null) {
@@ -236,13 +236,13 @@ class FirebaseService {
     Map<String, dynamic> filter,
   ) async {
     try {
-      final userId = getCurrentUserId();
-      if (userId == null) {
-        throw Exception('Usuario no autenticado');
-      }
+      // final userId = getCurrentUserId();
+      // if (userId == null) {
+      //   throw Exception('Usuario no autenticado');
+      // }
 
-      Query query =
-          getCollection(collection).where('userId', isEqualTo: userId);
+      Query query = getCollection(collection);
+          // getCollection(collection).where('userId', isEqualTo: userId);
 
       // Aplicar filtros
       for (var entry in filter.entries) {

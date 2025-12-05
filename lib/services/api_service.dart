@@ -60,13 +60,14 @@ class ApiService {
 
   }
 
-  // Actualizar usuario (Perfil)
+  // Actualizar perfil (nombre)
   Future<Map<String, dynamic>> updateUser(String id, String name, String email) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/users/$id'),
+      // Nota: El backend actual solo actualiza el nombre en /update-profile
+      final response = await http.post(
+        Uri.parse('$baseUrl/update-profile'),
         headers: _getHeaders(),
-        body: jsonEncode({'name': name, 'email': email}),
+        body: jsonEncode({'name': name}),
       );
 
       if (response.statusCode == 200) {
@@ -81,7 +82,7 @@ class ApiService {
           final errorBody = jsonDecode(response.body);
           final errorMessage = errorBody['message'] ??
               errorBody['error'] ??
-              'Error actualizando usuario';
+              'Error actualizando perfil';
           throw Exception(errorMessage);
         } catch (_) {
           throw Exception(
@@ -98,17 +99,11 @@ class ApiService {
   Future<void> changePassword(
       String currentPassword, String newPassword) async {
     try {
-      // Intentamos usar el endpoint de cambio de contraseña específico si existe,
-      // o podríamos necesitar usar updateUser si la API lo maneja así.
-      // Por ahora mantenemos /user/password asumiendo que es una operación especial,
-      // pero si falla, consideraremos moverlo.
-      final response = await http.put(
-        Uri.parse('$baseUrl/user/password'), // OJO: Verificar si este endpoint existe
+      final response = await http.post(
+        Uri.parse('$baseUrl/change-password'),
         headers: _getHeaders(),
         body: jsonEncode({
-          'current_password': currentPassword,
-          'new_password': newPassword,
-          'new_password_confirmation': newPassword,
+          'password': newPassword, // El backend espera 'password'
         }),
       );
 
@@ -134,8 +129,9 @@ class ApiService {
   Future<void> deleteUser(String id) async {
     try {
       final response = await http.delete(
-        Uri.parse('$baseUrl/users/$id'),
+        Uri.parse('$baseUrl/delete-account'),
         headers: _getHeaders(),
+        body: jsonEncode({'confirmation': 'eliminarcuenta'}),
       );
 
       if (response.statusCode != 200 && response.statusCode != 204) {
@@ -157,13 +153,13 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> register(
-      String name, String email, String password) async {
+      String name, String email, String password, {String role = 'vendedor'}) async {
     try {
       print('Intentando registro en: $baseUrl/register');
       final response = await http.post(
         Uri.parse('$baseUrl/register'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'name': name, 'email': email, 'password': password}),
+        body: jsonEncode({'name': name, 'email': email, 'password': password, 'role': role}),
       );
 
       print('Register Status: ${response.statusCode}');
@@ -204,6 +200,33 @@ class ApiService {
       headers['Authorization'] = 'Bearer $_authToken';
     }
     return headers;
+  }
+
+  // --- USUARIOS ---
+
+  Future<List<dynamic>> getUsers() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/users'), // Asegúrate de tener esta ruta en Laravel
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        try {
+          final data = jsonDecode(response.body);
+          if (data is List) return data;
+          if (data['data'] != null) return data['data'];
+          return [];
+        } catch (e) {
+          throw Exception('Error al procesar usuarios: $e');
+        }
+      } else {
+        throw Exception('Error cargando usuarios: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Excepción en getUsers: $e');
+      rethrow;
+    }
   }
 
   // --- CRUD PROVEEDORES ---

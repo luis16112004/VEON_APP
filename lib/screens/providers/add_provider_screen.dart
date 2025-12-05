@@ -109,15 +109,54 @@ class _AddProviderScreenState extends State<AddProviderScreen> {
     return null;
   }
 
+  bool _isValidatingEmail = false;
+  String? _emailErrorMessage;
+
   String? _validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) {
+      setState(() {
+        _emailErrorMessage = 'Email is required';
+      });
       return 'Email is required';
     }
     final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     if (!emailRegex.hasMatch(value.trim())) {
+      setState(() {
+        _emailErrorMessage = 'Please enter a valid email';
+      });
       return 'Please enter a valid email';
     }
+    
+    // Si hay un mensaje de error de unicidad, mantenerlo
+    if (_emailErrorMessage == 'Este correo ya está registrado') {
+      return _emailErrorMessage;
+    }
+    
+    setState(() {
+      _emailErrorMessage = null;
+    });
     return null;
+  }
+
+  Future<void> _validateEmailUniqueness(String email) async {
+    if (email.trim().isEmpty) return;
+    
+    setState(() => _isValidatingEmail = true);
+    try {
+      final isUnique = await _providerService.isEmailUnique(email.trim());
+      setState(() {
+        _isValidatingEmail = false;
+        if (!isUnique) {
+          _emailErrorMessage = 'Este correo ya está registrado';
+        } else {
+          _emailErrorMessage = null;
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isValidatingEmail = false;
+      });
+    }
   }
 
   String? _validateAddress(String? value) {
@@ -138,7 +177,10 @@ class _AddProviderScreenState extends State<AddProviderScreen> {
   }
 
   Future<void> _handleContinue() async {
-    if (_formKey.currentState!.validate()) {
+    // Validar unicidad del correo antes de guardar
+    await _validateEmailUniqueness(_emailController.text);
+    
+    if (_formKey.currentState!.validate() && _emailErrorMessage == null) {
       try {
         final provider = Provider(
           id: const Uuid().v4(),
@@ -175,9 +217,10 @@ class _AddProviderScreenState extends State<AddProviderScreen> {
         }
       } catch (e) {
         if (mounted) {
+          final errorMessage = e.toString().replaceFirst('Exception: ', '');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error: $e'),
+              content: Text(errorMessage),
               backgroundColor: AppColors.error,
             ),
           );
@@ -263,9 +306,35 @@ class _AddProviderScreenState extends State<AddProviderScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: _inputDecoration('Email', Icons.email_outlined),
+                  decoration: _inputDecoration(
+                    'Email',
+                    Icons.email_outlined,
+                    suffixIcon: _isValidatingEmail
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: Padding(
+                              padding: EdgeInsets.all(12.0),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : null,
+                  ).copyWith(
+                    errorText: _emailErrorMessage,
+                  ),
                   validator: _validateEmail,
                   textInputAction: TextInputAction.next,
+                  onChanged: (value) {
+                    _validateEmail(value);
+                    // Validar unicidad después de un breve delay
+                    if (value.trim().isNotEmpty) {
+                      Future.delayed(const Duration(milliseconds: 500), () {
+                        if (_emailController.text == value) {
+                          _validateEmailUniqueness(value);
+                        }
+                      });
+                    }
+                  },
                 ),
 
                 const SizedBox(height: 20),
@@ -437,10 +506,11 @@ class _AddProviderScreenState extends State<AddProviderScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint, IconData icon) {
+  InputDecoration _inputDecoration(String hint, IconData icon, {Widget? suffixIcon}) {
     return InputDecoration(
       hintText: hint,
       prefixIcon: Icon(icon, color: AppColors.grey),
+      suffixIcon: suffixIcon,
       filled: true,
       fillColor: AppColors.white,
       border: OutlineInputBorder(

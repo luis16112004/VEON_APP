@@ -12,6 +12,8 @@ import 'database/local_storage.dart';
 import 'database/firebase_service.dart';
 import 'database/sync_service.dart';
 import 'firebase_options.dart';
+import 'config/fastapi_config.dart';
+import 'services/fastapi_auth_service.dart';
 
 void main() async {
   // Asegura que los bindings de Flutter estén listos antes de ejecutar código asíncrono.
@@ -48,6 +50,26 @@ void main() async {
   // PASO 3: Iniciar el servicio de sincronización.
   // Este se encargará de gestionar el estado online/offline y sincronizar datos.
   await SyncService.instance.init();
+
+  // PASO 4: Inicializar autenticación FastAPI si está habilitado
+  if (FastApiConfig.isFastApiEnabled) {
+    try {
+      final authSuccess = await FastApiAuthService.instance.initializeWithDefaultCredentials();
+      if (authSuccess) {
+        if (kDebugMode) {
+          print('✅ FastAPI autenticación inicializada correctamente');
+        }
+      } else {
+        if (kDebugMode) {
+          print('⚠️ No se pudo autenticar con FastAPI al inicio');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Error inicializando FastAPI: $e');
+      }
+    }
+  }
 
   if (kDebugMode) {
     print('✅ VEON Business App: Servicios inicializados.');

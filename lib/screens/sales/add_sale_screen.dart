@@ -8,6 +8,7 @@ import '../../models/product.dart';
 import '../../services/sale_service.dart';
 import '../../services/client_service.dart';
 import '../../services/product_service.dart';
+import '../../services/auth_service.dart';
 
 class AddSaleScreen extends StatefulWidget {
   const AddSaleScreen({super.key});
@@ -21,6 +22,7 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
   final _saleService = SaleService();
   final _clientService = ClientService();
   final _productService = ProductService();
+  final _authService = AuthService.instance;
 
   // Datos de la venta
   Client? _selectedClient;
@@ -74,51 +76,51 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Selección de cliente
-                    _buildClientSelector(),
-                    const SizedBox(height: 24),
+              key: _formKey,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Selección de cliente
+                          _buildClientSelector(),
+                          const SizedBox(height: 24),
 
-                    // Lista de productos
-                    _buildProductsList(),
-                    const SizedBox(height: 16),
+                          // Lista de productos
+                          _buildProductsList(),
+                          const SizedBox(height: 16),
 
-                    // Botón para agregar productos
-                    _buildAddProductButton(),
-                    const SizedBox(height: 24),
+                          // Botón para agregar productos
+                          _buildAddProductButton(),
+                          const SizedBox(height: 24),
 
-                    // Método de pago
-                    _buildPaymentMethodSelector(),
-                    const SizedBox(height: 24),
+                          // Método de pago
+                          _buildPaymentMethodSelector(),
+                          const SizedBox(height: 24),
 
-                    // Descuento
-                    _buildDiscountField(),
-                    const SizedBox(height: 24),
+                          // Descuento
+                          _buildDiscountField(),
+                          const SizedBox(height: 24),
 
-                    // Notas
-                    _buildNotesField(),
-                    const SizedBox(height: 24),
+                          // Notas
+                          _buildNotesField(),
+                          const SizedBox(height: 24),
 
-                    // Resumen de totales
-                    _buildTotalsSummary(),
-                  ],
-                ),
+                          // Resumen de totales
+                          _buildTotalsSummary(),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Botón de guardar
+                  _buildSaveButton(),
+                ],
               ),
             ),
-
-            // Botón de guardar
-            _buildSaveButton(),
-          ],
-        ),
-      ),
     );
   }
 
@@ -362,7 +364,8 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
         children: [
           _buildTotalRow('Subtotal:', _subtotal),
           const SizedBox(height: 8),
-          _buildTotalRow('IVA (${(_taxRate * 100).toStringAsFixed(0)}%):', _tax),
+          _buildTotalRow(
+              'IVA (${(_taxRate * 100).toStringAsFixed(0)}%):', _tax),
           const SizedBox(height: 8),
           _buildTotalRow('Descuento:', -_discount, color: Colors.red),
           const Divider(height: 24),
@@ -379,12 +382,12 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
   }
 
   Widget _buildTotalRow(
-      String label,
-      double amount, {
-        bool isBold = false,
-        double fontSize = 16,
-        Color? color,
-      }) {
+    String label,
+    double amount, {
+    bool isBold = false,
+    double fontSize = 16,
+    Color? color,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -476,8 +479,12 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
                               'Stock: ${product.stock} ${product.unit ?? 'unidades'}',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: product.stock > 0 ? Colors.grey[600] : Colors.red,
-                                fontWeight: product.stock == 0 ? FontWeight.bold : FontWeight.normal,
+                                color: product.stock > 0
+                                    ? Colors.grey[600]
+                                    : Colors.red,
+                                fontWeight: product.stock == 0
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                           ],
@@ -507,7 +514,8 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: quantityController,
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       labelText: 'Cantidad',
                       border: const OutlineInputBorder(),
@@ -524,7 +532,8 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
                       if (qty == null || qty <= 0) {
                         return 'La cantidad debe ser mayor a 0';
                       }
-                      if (selectedProduct != null && qty > selectedProduct!.stock) {
+                      if (selectedProduct != null &&
+                          qty > selectedProduct!.stock) {
                         return 'La cantidad (${qty.toStringAsFixed(2)}) excede el stock disponible (${selectedProduct!.stock})';
                       }
                       return null;
@@ -534,7 +543,8 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
                       setDialogState(() {
                         quantity = qty;
                         // Validar en tiempo real
-                        if (selectedProduct != null && qty > selectedProduct!.stock) {
+                        if (selectedProduct != null &&
+                            qty > selectedProduct!.stock) {
                           formKey.currentState?.validate();
                         }
                       });
@@ -558,8 +568,7 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            'La cantidad solicitada (${quantity.toStringAsFixed(2)}) excede el stock disponible (${selectedProduct!.stock})'
-                          ),
+                              'La cantidad solicitada (${quantity.toStringAsFixed(2)}) excede el stock disponible (${selectedProduct!.stock})'),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -567,11 +576,13 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
                     }
 
                     final item = SaleItem.create(
-                      productId: selectedProduct!.id,
+                      productId: selectedProduct!.id?.toString() ?? '',
                       productName: selectedProduct!.name,
                       sku: selectedProduct!.sku,
                       quantity: quantity,
-                      unit: selectedProduct!.unit ?? selectedProduct!.unitOfMeasurement ?? 'unidades',
+                      unit: selectedProduct!.unit ??
+                          selectedProduct!.unitOfMeasurement ??
+                          'unidades',
                       unitPrice: selectedProduct!.salePrice,
                     );
 
@@ -602,6 +613,10 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Obtener el usuario actual para asignar como seller
+      final currentUser = await _authService.getCurrentUser();
+      final userId = currentUser?.id;
+
       final sale = Sale.create(
         id: 'sale_${const Uuid().v4()}',
         clientId: _selectedClient!.id,
@@ -612,6 +627,7 @@ class _AddSaleScreenState extends State<AddSaleScreen> {
         discount: _discount,
         paymentMethod: _paymentMethod,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
+        userId: userId,
       );
 
       await _saleService.createSale(sale);

@@ -13,6 +13,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../widgets/client_list_item.dart';
 import '../../../widgets/statistics_card.dart';
 import '../../../widgets/top_clients_card.dart';
+import '../../reports/reports_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback? onNavigateToClients;
@@ -133,9 +134,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const Text(
-                                      'Administrator',
-                                      style: TextStyle(
+                                    Text(
+                                      _currentUser?.role ?? 'Usuario',
+                                      style: const TextStyle(
                                         color: AppColors.grey,
                                         fontSize: 12,
                                       ),
@@ -186,7 +187,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             TextButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const ReportsScreen(),
+                                  ),
+                                );
+                              },
                               child: Row(
                                 children: [
                                   const Text(

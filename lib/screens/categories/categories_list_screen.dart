@@ -1,31 +1,29 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:veon_app/models/product.dart';
+import 'package:veon_app/models/category.dart';
 import 'package:veon_app/screens/auth/constants/colors.dart';
-import 'package:veon_app/screens/products/add_product_screen.dart';
-import 'package:veon_app/screens/products/edit_product_screen.dart';
-import 'package:veon_app/screens/products/inventory_replenishment_screen.dart';
-import 'package:veon_app/services/product_service.dart';
+import 'package:veon_app/screens/categories/add_category_screen.dart';
+import 'package:veon_app/screens/categories/edit_category_screen.dart';
+import 'package:veon_app/services/category_service.dart';
 
-class ProductsListScreen extends StatefulWidget {
-  const ProductsListScreen({super.key});
+class CategoriesListScreen extends StatefulWidget {
+  const CategoriesListScreen({super.key});
 
   @override
-  State<ProductsListScreen> createState() => _ProductsListScreenState();
+  State<CategoriesListScreen> createState() => _CategoriesListScreenState();
 }
 
-class _ProductsListScreenState extends State<ProductsListScreen> {
-  final ProductService _productService = ProductService();
-  List<Product> _products = [];
-  List<Product> _filteredProducts = [];
+class _CategoriesListScreenState extends State<CategoriesListScreen> {
+  final CategoryService _categoryService = CategoryService.instance;
+  List<Category> _categories = [];
+  List<Category> _filteredCategories = [];
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadProducts();
-    _searchController.addListener(_filterProducts);
+    _loadCategories();
+    _searchController.addListener(_filterCategories);
   }
 
   @override
@@ -34,13 +32,13 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
     super.dispose();
   }
 
-  Future<void> _loadProducts() async {
+  Future<void> _loadCategories() async {
     setState(() => _isLoading = true);
     try {
-      final products = await _productService.getProducts();
+      final categories = await _categoryService.getCategories();
       setState(() {
-        _products = products;
-        _filteredProducts = products;
+        _categories = categories;
+        _filteredCategories = categories;
         _isLoading = false;
       });
     } catch (e) {
@@ -48,7 +46,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading products: $e'),
+            content: Text('Error cargando categorías: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -56,74 +54,53 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
     }
   }
 
-  void _filterProducts() {
+  void _filterCategories() {
     final query = _searchController.text.toLowerCase();
     setState(() {
       if (query.isEmpty) {
-        _filteredProducts = _products;
+        _filteredCategories = _categories;
       } else {
-        _filteredProducts = _products.where((product) {
-          return product.name.toLowerCase().contains(query) ||
-              product.sku.toLowerCase().contains(query) ||
-              (product.providerName?.toLowerCase().contains(query) ?? false);
+        _filteredCategories = _categories.where((category) {
+          return category.name.toLowerCase().contains(query) ||
+              (category.description?.toLowerCase().contains(query) ?? false);
         }).toList();
       }
     });
   }
 
-  Future<void> _navigateToAddProduct() async {
+  Future<void> _navigateToAddCategory() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const AddProductScreen(),
+        builder: (context) => const AddCategoryScreen(),
       ),
     );
 
     if (result == true) {
-      _loadProducts();
+      _loadCategories();
     }
   }
 
-  Future<void> _navigateToEditProduct(Product product) async {
+  Future<void> _navigateToEditCategory(Category category) async {
     final changed = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => EditProductScreen(product: product),
+        builder: (context) => EditCategoryScreen(category: category),
       ),
     );
     if (changed == true) {
-      _loadProducts();
+      _loadCategories();
     }
   }
 
-  Future<void> _navigateToInventoryReplenishment(Product product) async {
-    final changed = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => InventoryReplenishmentScreen(product: product),
-      ),
-    );
-    if (changed == true) {
-      _loadProducts();
-    }
-  }
-
-  Future<void> _deleteProduct(Product product) async {
-    if (product.id == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error: El producto no tiene ID'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
+  Future<void> _deleteCategory(Category category) async {
+    if (category.id == null) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Eliminar Producto'),
-        content: Text('¿Estás seguro de que deseas eliminar ${product.name}?'),
+        title: const Text('Eliminar Categoría'),
+        content: Text('¿Estás seguro de que deseas eliminar ${category.name}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -142,26 +119,15 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
 
     if (confirmed == true) {
       try {
-        final success = await _productService.deleteProduct(product.id!);
-        if (success) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Producto eliminado exitosamente'),
-                backgroundColor: AppColors.success,
-              ),
-            );
-            _loadProducts();
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Error eliminando producto'),
-                backgroundColor: AppColors.error,
-              ),
-            );
-          }
+        await _categoryService.deleteCategory(category.id!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Categoría eliminada exitosamente'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          _loadCategories();
         }
       } catch (e) {
         if (mounted) {
@@ -190,7 +156,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Productos',
+                      'Categorías',
                       style: TextStyle(
                         color: AppColors.white,
                         fontSize: 24,
@@ -228,7 +194,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: 'Buscar producto...',
+                          hintText: 'Buscar categoría...',
                           hintStyle: TextStyle(
                             color: AppColors.textHint,
                             fontSize: 14,
@@ -260,7 +226,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                         color: AppColors.white,
                         size: 28,
                       ),
-                      onPressed: _navigateToAddProduct,
+                      onPressed: _navigateToAddCategory,
                     ),
                   ),
                 ],
@@ -269,7 +235,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
 
             const SizedBox(height: 24),
 
-            // Products List
+            // Categories List
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -277,21 +243,21 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                         color: AppColors.primaryGreen,
                       ),
                     )
-                  : _filteredProducts.isEmpty
+                  : _filteredCategories.isEmpty
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                Icons.inventory_2_outlined,
+                                Icons.category_outlined,
                                 size: 64,
                                 color: AppColors.grey,
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                _products.isEmpty
-                                    ? 'No hay productos registrados'
-                                    : 'No se encontraron productos',
+                                _categories.isEmpty
+                                    ? 'No hay categorías registradas'
+                                    : 'No se encontraron categorías',
                                 style: TextStyle(
                                   color: AppColors.grey,
                                   fontSize: 16,
@@ -301,14 +267,14 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                           ),
                         )
                       : RefreshIndicator(
-                          onRefresh: _loadProducts,
+                          onRefresh: _loadCategories,
                           color: AppColors.primaryGreen,
                           child: ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                            itemCount: _filteredProducts.length,
+                            itemCount: _filteredCategories.length,
                             itemBuilder: (context, index) {
-                              final product = _filteredProducts[index];
-                              return _buildProductCard(product);
+                              final category = _filteredCategories[index];
+                              return _buildCategoryCard(category);
                             },
                           ),
                         ),
@@ -319,7 +285,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
     );
   }
 
-  Widget _buildProductCard(Product product) {
+  Widget _buildCategoryCard(Category category) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -329,7 +295,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
       ),
       child: Row(
         children: [
-          // Product Image/Logo
+          // Category Icon
           Container(
             width: 60,
             height: 60,
@@ -337,60 +303,40 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
               color: AppColors.primaryBlue,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: product.imagePath != null && File(product.imagePath!).existsSync()
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(
-                      File(product.imagePath!),
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return _buildDefaultIcon();
-                      },
-                    ),
-                  )
-                : _buildDefaultIcon(),
+            child: const Icon(
+              Icons.category,
+              color: AppColors.white,
+              size: 30,
+            ),
           ),
 
           const SizedBox(width: 16),
 
-          // Product Info
+          // Category Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  product.name,
+                  category.name,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'SKU: ${product.sku}',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
+                if (category.description != null && category.description!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    category.description!,
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '\$${product.salePrice.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Stock: ${product.stock}',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
+                ],
               ],
             ),
           ),
@@ -399,24 +345,6 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Inventory Replenishment Button
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryBlue,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.add,
-                    color: AppColors.white,
-                    size: 20,
-                  ),
-                  onPressed: () => _navigateToInventoryReplenishment(product),
-                ),
-              ),
-              const SizedBox(width: 8),
               // Edit Button
               Container(
                 width: 40,
@@ -431,7 +359,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                     color: AppColors.white,
                     size: 20,
                   ),
-                  onPressed: () => _navigateToEditProduct(product),
+                  onPressed: () => _navigateToEditCategory(category),
                 ),
               ),
               const SizedBox(width: 8),
@@ -449,7 +377,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                     color: AppColors.white,
                     size: 20,
                   ),
-                  onPressed: () => _deleteProduct(product),
+                  onPressed: () => _deleteCategory(category),
                 ),
               ),
             ],
@@ -458,14 +386,6 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
       ),
     );
   }
-
-  Widget _buildDefaultIcon() {
-    return const Center(
-      child: Icon(
-        Icons.inventory_2_outlined,
-        color: AppColors.white,
-        size: 30,
-      ),
-    );
-  }
 }
+
+

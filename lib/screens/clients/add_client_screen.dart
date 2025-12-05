@@ -102,18 +102,59 @@ class _AddClientScreenState extends State<AddClientScreen> {
     return null;
   }
 
+  bool _isValidatingEmail = false;
+  String? _emailErrorMessage;
+
   String? _validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) {
-      setState(() => _emailError = true);
+      setState(() {
+        _emailError = true;
+        _emailErrorMessage = 'Email is required';
+      });
       return 'Email is required';
     }
     final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     if (!emailRegex.hasMatch(value.trim())) {
-      setState(() => _emailError = true);
+      setState(() {
+        _emailError = true;
+        _emailErrorMessage = 'Please enter a valid email';
+      });
       return 'Please enter a valid email';
     }
-    setState(() => _emailError = false);
+    
+    // Si hay un mensaje de error de unicidad, mantenerlo
+    if (_emailErrorMessage == 'Este correo ya está registrado') {
+      return _emailErrorMessage;
+    }
+    
+    setState(() {
+      _emailError = false;
+      _emailErrorMessage = null;
+    });
     return null;
+  }
+
+  Future<void> _validateEmailUniqueness(String email) async {
+    if (email.trim().isEmpty) return;
+    
+    setState(() => _isValidatingEmail = true);
+    try {
+      final isUnique = await _clientService.isEmailUnique(email.trim());
+      setState(() {
+        _isValidatingEmail = false;
+        if (!isUnique) {
+          _emailError = true;
+          _emailErrorMessage = 'Este correo ya está registrado';
+        } else {
+          _emailError = false;
+          _emailErrorMessage = null;
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isValidatingEmail = false;
+      });
+    }
   }
 
   String? _validateAddress(String? value) {
@@ -130,7 +171,10 @@ class _AddClientScreenState extends State<AddClientScreen> {
   }
 
   Future<void> _handleContinue() async {
-    if (_formKey.currentState!.validate()) {
+    // Validar unicidad del correo antes de guardar
+    await _validateEmailUniqueness(_emailController.text);
+    
+    if (_formKey.currentState!.validate() && !_emailError) {
       try {
         final client = Client(
           id: const Uuid().v4(),
@@ -166,9 +210,10 @@ class _AddClientScreenState extends State<AddClientScreen> {
         }
       } catch (e) {
         if (mounted) {
+          final errorMessage = e.toString().replaceFirst('Exception: ', '');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error: $e'),
+              content: Text(errorMessage),
               backgroundColor: AppColors.error,
             ),
           );
@@ -411,6 +456,16 @@ class _AddClientScreenState extends State<AddClientScreen> {
                   decoration: InputDecoration(
                     hintText: 'Email',
                     prefixIcon: const Icon(Icons.email_outlined, color: AppColors.grey),
+                    suffixIcon: _isValidatingEmail
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: Padding(
+                              padding: EdgeInsets.all(12.0),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : null,
                     filled: true,
                     fillColor: AppColors.white,
                     border: OutlineInputBorder(
@@ -452,11 +507,14 @@ class _AddClientScreenState extends State<AddClientScreen> {
                   validator: _validateEmail,
                   textInputAction: TextInputAction.next,
                   onChanged: (value) {
-                    if (_emailError) {
-                      final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-                      if (emailRegex.hasMatch(value.trim())) {
-                        setState(() => _emailError = false);
-                      }
+                    _validateEmail(value);
+                    // Validar unicidad después de un breve delay
+                    if (value.trim().isNotEmpty) {
+                      Future.delayed(const Duration(milliseconds: 500), () {
+                        if (_emailController.text == value) {
+                          _validateEmailUniqueness(value);
+                        }
+                      });
                     }
                   },
                 ),

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/quotation_model.dart';
 import '../../services/quotation_service.dart';
+import '../../services/auth_service.dart';
+import '../../services/permission_service.dart';
 import 'add_quotation_screen.dart';
 import 'quotation_detail_screen.dart';
 
@@ -16,16 +18,29 @@ class QuotationsListScreen extends StatefulWidget {
 
 class _QuotationsListScreenState extends State<QuotationsListScreen> {
   final _quotationService = QuotationService();
+  final _authService = AuthService.instance;
+  final _permissionService = PermissionService.instance;
   List<Quotation> _quotations = [];
   List<Quotation> _filteredQuotations = [];
   bool _isLoading = false;
   String _searchQuery = '';
   QuotationStatus? _filterStatus;
+  bool _canCreateQuotation = false;
+  bool _canEditQuotation = false;
 
   @override
   void initState() {
     super.initState();
+    _checkPermissions();
     _loadQuotations();
+  }
+
+  Future<void> _checkPermissions() async {
+    final user = await _authService.getCurrentUser();
+    setState(() {
+      _canCreateQuotation = _permissionService.canCreateQuotation(user);
+      _canEditQuotation = _permissionService.canEditQuotation(user);
+    });
   }
 
   Future<void> _loadQuotations() async {
@@ -95,20 +110,22 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'quotations_fab',
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AddQuotationScreen()),
-          );
-          _loadQuotations();
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Nueva Cotización'),
-        backgroundColor: const Color(0xFF3B82F6),
-        foregroundColor: Colors.white,
-      ),
+      floatingActionButton: _canCreateQuotation
+          ? FloatingActionButton.extended(
+              heroTag: 'quotations_fab',
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddQuotationScreen()),
+                );
+                _loadQuotations();
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Nueva Cotización'),
+              backgroundColor: const Color(0xFF3B82F6),
+              foregroundColor: Colors.white,
+            )
+          : null,
     );
   }
 

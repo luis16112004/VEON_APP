@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:veon_app/screens/auth/constants/colors.dart';
 import 'package:veon_app/services/auth_service.dart';
+import 'package:veon_app/services/permission_service.dart';
 import 'package:veon_app/models/user_model.dart';
+import 'package:veon_app/screens/profile/organization_screen.dart';
 import 'package:veon_app/screens/auth/welcome_screen.dart';
 
 class UserProfileScreen extends StatefulWidget {
@@ -57,7 +59,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (_currentUser == null) return;
 
     final nameController = TextEditingController(text: _currentUser!.name);
-    final emailController = TextEditingController(text: _currentUser!.email);
 
     await showDialog(
       context: context,
@@ -78,16 +79,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: emailController,
-              enabled: false, // Deshabilitado como solicitó el usuario
-              style: const TextStyle(color: Colors.grey),
-              decoration: const InputDecoration(
-                labelText: 'Email (No editable)',
-                labelStyle: TextStyle(color: Colors.black54),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primaryGreen)),
-              ),
+            Text(
+              'Email: ${_currentUser!.email}',
+              style: const TextStyle(color: Colors.grey, fontSize: 14),
             ),
           ],
         ),
@@ -102,10 +96,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               try {
                 Navigator.pop(context);
                 setState(() => _isLoading = true);
-                await _authService.updateProfile(
-                  name: nameController.text,
-                  email: emailController.text,
-                );
+                await _authService.updateName(nameController.text);
                 await _loadUser();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -335,49 +326,72 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     Text(
                       _currentUser?.email ?? '',
                       style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 14,
-                      ),
+                         fontSize: 14,
+    color: Colors.grey,
+                    ),
                     ),
 
-                    const SizedBox(height: 32),
-
-                    // Profile Options
+                    const SizedBox(height: 24),
+                    
+                    // Editar perfil - disponible para todos
                     _buildProfileOption(
                       icon: Icons.edit_outlined,
-                      iconColor: AppColors.primaryBlue,
-                      title: 'Edit username',
-                      subtitle: 'Update your personal information',
+                      iconColor: Colors.blue,
+                      title: 'Editar Perfil',
+                      subtitle: 'Cambiar tu nombre',
                       onTap: _showEditProfileDialog,
                     ),
 
                     const SizedBox(height: 16),
 
+                    // Organización - solo para admin y gerente
+                    if (_currentUser != null && PermissionService.instance.canManageUsers(_currentUser))
+                      _buildProfileOption(
+                        icon: Icons.business_outlined,
+                        iconColor: Colors.orange,
+                        title: 'Organización',
+                        subtitle: 'Gestionar usuarios y roles',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const OrganizationScreen(),
+                            ),
+                          ).then((_) => _loadUser());
+                        },
+                      ),
+
+                    if (_currentUser != null && PermissionService.instance.canManageUsers(_currentUser))
+                      const SizedBox(height: 16),
+
+                    // Cambiar contraseña - disponible para todos
                     _buildProfileOption(
                       icon: Icons.lock_outline,
                       iconColor: AppColors.primaryGreen,
-                      title: 'Change password',
-                      subtitle: 'Update your login password',
+                      title: 'Cambiar Contraseña',
+                      subtitle: 'Actualizar tu contraseña de acceso',
                       onTap: _showChangePasswordDialog,
                     ),
 
                     const SizedBox(height: 16),
 
+                    // Cerrar sesión - disponible para todos
                     _buildProfileOption(
                       icon: Icons.logout,
                       iconColor: AppColors.error,
-                      title: 'Sign out / Log out',
-                      subtitle: 'Sign out of your account',
+                      title: 'Cerrar Sesión',
+                      subtitle: 'Salir de tu cuenta',
                       onTap: _handleLogout,
                     ),
 
                     const SizedBox(height: 16),
 
+                    // Eliminar cuenta - disponible para todos
                     _buildProfileOption(
                       icon: Icons.delete_outline,
                       iconColor: AppColors.error,
-                      title: 'Delete account',
-                      subtitle: 'Permanently delete your account',
+                      title: 'Eliminar Cuenta',
+                      subtitle: 'Eliminar permanentemente tu cuenta',
                       onTap: _handleDeleteAccount,
                     ),
                   ],

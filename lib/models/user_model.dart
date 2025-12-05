@@ -2,14 +2,16 @@
 
 class UserModel {
   final String id; // El ID del documento en Firestore
-  final String name; // Necesitas este campo para el Home
+  final String name;
   final String email;
+  final String role; // 'admin' or 'vendedor'
   final String? createdAt;
 
   UserModel({
     required this.id,
-    required this.name, // Asegúrate de agregarlo al formulario de registro
+    required this.name,
     required this.email,
+    this.role = 'vendedor', // Default role
     this.createdAt,
   });
 
@@ -19,6 +21,7 @@ class UserModel {
       '_id': id,
       'name': name,
       'email': email,
+      'role': role,
       'createdAt': createdAt,
     };
   }
@@ -29,6 +32,7 @@ class UserModel {
       id: json['_id'] as String,
       name: json['name'] as String,
       email: json['email'] as String,
+      role: json['role'] as String? ?? 'vendedor',
       createdAt: json['createdAt'] as String?,
     );
   }

@@ -2,8 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
-import '../config/api_config.dart';
-import 'api_service.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 /// Servicio de autenticación usando Firebase Auth o Laravel API
 /// Maneja login, registro, y autenticación con Google
@@ -12,10 +11,6 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final ApiService _apiService = ApiService();
-  
-  // Variable para almacenar el usuario de Laravel en memoria
-  UserModel? _laravelUser;
 
   AuthService._();
 
@@ -37,36 +32,10 @@ class AuthService {
     required String name,
     required String email,
     required String password,
+    String role = 'vendedor', // Default role
   }) async {
     try {
-      // Si Laravel API está activo, usar Laravel
-      if (ApiConfig.isLaravelEnabled) {
-        final response = await _apiService.register(name, email, password);
-
-        // Crear UserModel desde la respuesta de Laravel
-        final userModel = UserModel(
-          id: response['user']?['id']?.toString() ??
-              response['id']?.toString() ??
-              '',
-          name: response['user']?['name'] ?? response['name'] ?? name,
-          email: response['user']?['email'] ??
-              response['email'] ??
-              email.trim().toLowerCase(),
-          createdAt: response['user']?['created_at'] ??
-              response['created_at'] ??
-              DateTime.now().toIso8601String(),
-        );
-
-        print(
-            '✅ Usuario registrado exitosamente en Laravel: ${userModel.email}');
-        
-        // Guardar usuario en memoria
-        _laravelUser = userModel;
-        
-        return userModel;
-      }
-
-      // Comportamiento original con Firebase
+      // Usar Firebase directamente
       // Crear usuario en Firebase Auth (las contraseñas ya están cifradas por Firebase)
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email.trim().toLowerCase(),
@@ -94,6 +63,7 @@ class AuthService {
         'id': user.uid,
         'name': name,
         'email': email.trim().toLowerCase(),
+        'role': role,
         'createdAt': DateTime.now().toIso8601String(),
         'updatedAt': DateTime.now().toIso8601String(),
       });
@@ -117,33 +87,7 @@ class AuthService {
     required String password,
   }) async {
     try {
-      // Si Laravel API está activo, usar Laravel
-      if (ApiConfig.isLaravelEnabled) {
-        final response = await _apiService.login(email, password);
-
-        // Crear UserModel desde la respuesta de Laravel
-        final userModel = UserModel(
-          id: response['user']?['id']?.toString() ??
-              response['id']?.toString() ??
-              '',
-          name: response['user']?['name'] ?? response['name'] ?? 'Usuario',
-          email: response['user']?['email'] ??
-              response['email'] ??
-              email.trim().toLowerCase(),
-          createdAt: response['user']?['created_at'] ??
-              response['created_at'] ??
-              DateTime.now().toIso8601String(),
-        );
-
-        print('✅ Login exitoso en Laravel: ${userModel.email}');
-        
-        // Guardar usuario en memoria
-        _laravelUser = userModel;
-        
-        return userModel;
-      }
-
-      // Comportamiento original con Firebase
+      // Usar Firebase directamente
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: email.trim().toLowerCase(),
         password: password,
@@ -163,10 +107,11 @@ class AuthService {
           id: user.uid,
           name: userData['name'] ?? user.displayName ?? 'Usuario',
           email: user.email ?? email,
-          createdAt: userData['createdAt'],
+          role: userData['role'] ?? 'vendedor',
+          createdAt: _parseDate(userData['createdAt']),
         );
 
-        print('✅ Login exitoso: ${user.email}');
+        print('✅ Login exitoso: ${user.email} (${userModel.role})');
         return userModel;
       } else {
         // Si no existe en Firestore, crear el documento
@@ -239,7 +184,8 @@ class AuthService {
           id: user.uid,
           name: userData['name'] ?? user.displayName ?? 'Usuario',
           email: user.email ?? '',
-          createdAt: userData['createdAt'],
+          role: userData['role'] ?? 'vendedor',
+          createdAt: _parseDate(userData['createdAt']),
         );
       } else {
         // Nuevo usuario, crear documento en Firestore
@@ -273,11 +219,6 @@ class AuthService {
   /// Obtener el usuario actual logueado
   Future<UserModel?> getCurrentUser() async {
     try {
-      // Si Laravel API está activo, devolver usuario en memoria
-      if (ApiConfig.isLaravelEnabled) {
-        return _laravelUser;
-      }
-
       final user = _auth.currentUser;
       if (user == null) {
         return null;
@@ -292,7 +233,8 @@ class AuthService {
           id: user.uid,
           name: userData['name'] ?? user.displayName ?? 'Usuario',
           email: user.email ?? '',
-          createdAt: userData['createdAt'],
+          role: userData['role'] ?? 'vendedor',
+          createdAt: _parseDate(userData['createdAt']),
         );
       } else {
         // Si no existe en Firestore, crear documento básico
@@ -324,14 +266,8 @@ class AuthService {
   /// Cerrar sesión
   Future<void> logout() async {
     try {
-      // Limpiar token de Laravel si está activo
-      if (ApiConfig.isLaravelEnabled) {
-        _apiService.clearToken();
-        _laravelUser = null;
-      }
-
       await _auth.signOut();
-      
+
       try {
         await _googleSignIn.signOut();
       } catch (e) {
@@ -346,42 +282,35 @@ class AuthService {
   }
 
   // ==================== GESTIÓN DE PERFIL ====================
-  
-  /// Actualizar perfil (nombre y email)
-  Future<void> updateProfile({required String name, required String email}) async {
-    try {
-      if (ApiConfig.isLaravelEnabled) {
-        if (_laravelUser == null) throw Exception('Usuario no identificado');
-        
-        // Llamar a updateUser con el ID
-        await _apiService.updateUser(_laravelUser!.id, name, email);
-        
-        // Actualizar usuario en memoria
-        _laravelUser = UserModel(
-          id: _laravelUser!.id,
-          name: name,
-          email: email,
-          createdAt: _laravelUser!.createdAt,
-        );
-      } else {
-        final user = _auth.currentUser;
-        if (user == null) throw Exception('No hay usuario autenticado');
 
-        // Actualizar Firebase Auth
-        if (name != user.displayName) {
-          await user.updateDisplayName(name);
-        }
-        if (email != user.email) {
-          await user.verifyBeforeUpdateEmail(email);
-        }
-        
-        // Actualizar Firestore
-        await _firestore.collection('users').doc(user.uid).update({
-          'name': name,
-          'email': email,
-          'updatedAt': DateTime.now().toIso8601String(),
-        });
+  /// Actualizar perfil (nombre y email)
+  Future<void> updateProfile({required String name, String? email}) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No hay usuario autenticado');
+
+      // Actualizar Firebase Auth
+      if (name != user.displayName) {
+        await user.updateDisplayName(name);
+        await user.reload();
       }
+
+      if (email != null && email != user.email) {
+        await user.verifyBeforeUpdateEmail(email);
+      }
+
+      // Actualizar Firestore
+      final updateData = <String, dynamic>{
+        'name': name,
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      if (email != null) {
+        updateData['email'] = email;
+      }
+
+      await _firestore.collection('users').doc(user.uid).update(updateData);
+
       print('✅ Perfil actualizado exitosamente');
     } catch (e) {
       print('❌ Error actualizando perfil: $e');
@@ -389,24 +318,27 @@ class AuthService {
     }
   }
 
-  /// Cambiar contraseña
-  Future<void> changePassword({required String currentPassword, required String newPassword}) async {
-    try {
-      if (ApiConfig.isLaravelEnabled) {
-        await _apiService.changePassword(currentPassword, newPassword);
-      } else {
-        final user = _auth.currentUser;
-        if (user == null) throw Exception('No hay usuario autenticado');
+  /// Actualizar solo el nombre del usuario
+  Future<void> updateName(String name) async {
+    await updateProfile(name: name);
+  }
 
-        // Reautenticar para operaciones sensibles
-        final cred = EmailAuthProvider.credential(
-          email: user.email!,
-          password: currentPassword,
-        );
-        await user.reauthenticateWithCredential(cred);
-        
-        await user.updatePassword(newPassword);
-      }
+  /// Cambiar contraseña
+  Future<void> changePassword(
+      {required String currentPassword, required String newPassword}) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No hay usuario autenticado');
+
+      // Reautenticar para operaciones sensibles
+      final cred = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(cred);
+
+      await user.updatePassword(newPassword);
+
       print('✅ Contraseña actualizada exitosamente');
     } on FirebaseAuthException catch (e) {
       print('❌ Error cambiando contraseña: ${e.code}');
@@ -420,28 +352,103 @@ class AuthService {
   /// Eliminar cuenta
   Future<void> deleteAccount() async {
     try {
-      if (ApiConfig.isLaravelEnabled) {
-        if (_laravelUser == null) throw Exception('Usuario no identificado');
-        
-        // Llamar a deleteUser con el ID
-        await _apiService.deleteUser(_laravelUser!.id);
-        
-        _laravelUser = null;
-        _apiService.clearToken();
-      } else {
-        final user = _auth.currentUser;
-        if (user == null) throw Exception('No hay usuario autenticado');
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No hay usuario autenticado');
 
-        // Eliminar datos de Firestore
-        await _firestore.collection('users').doc(user.uid).delete();
-        
-        // Eliminar usuario de Auth
-        await user.delete();
-      }
+      // Eliminar datos de Firestore
+      await _firestore.collection('users').doc(user.uid).delete();
+
+      // Eliminar usuario de Auth
+      await user.delete();
+
       print('✅ Cuenta eliminada exitosamente');
     } catch (e) {
       print('❌ Error eliminando cuenta: $e');
       throw Exception('Error al eliminar cuenta: $e');
+    }
+  }
+
+
+
+  /// Crear nuevo usuario (solo admin)
+  /// Usa una instancia secundaria de Firebase para no cerrar la sesión del admin
+  Future<UserModel?> createUser({
+    required String name,
+    required String email,
+    required String password,
+    String role = 'vendedor',
+  }) async {
+    FirebaseApp? tempApp;
+    try {
+      // Inicializar app secundaria para no afectar la sesión actual
+      try {
+        tempApp = await Firebase.initializeApp(
+          name: 'tempRegister',
+          options: Firebase.app().options,
+        );
+      } catch (e) {
+        print('⚠️ Error inicializando app secundaria: $e');
+        // Si falla, usamos la instancia principal (cerrará sesión del admin)
+      }
+
+      final authInstance = tempApp != null 
+          ? FirebaseAuth.instanceFor(app: tempApp) 
+          : _auth;
+
+      // Crear usuario en Firebase Auth
+      final userCredential = await authInstance.createUserWithEmailAndPassword(
+        email: email.trim().toLowerCase(),
+        password: password,
+      );
+
+      final user = userCredential.user;
+      if (user == null) {
+        throw Exception('No se pudo crear el usuario');
+      }
+
+      // Actualizar el perfil del usuario con el nombre
+      await user.updateDisplayName(name);
+      
+      // Crear documento del usuario en Firestore (usando la instancia principal)
+      final userModel = UserModel(
+        id: user.uid,
+        name: name,
+        email: email.trim().toLowerCase(),
+        role: role,
+        createdAt: DateTime.now().toIso8601String(),
+      );
+
+      await _firestore.collection('users').doc(user.uid).set({
+        'id': user.uid,
+        'name': name,
+        'email': email.trim().toLowerCase(),
+        'role': role,
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+
+      print('✅ Usuario creado exitosamente: ${user.email} (${role})');
+      
+      // Limpiar app secundaria
+      if (tempApp != null) {
+        await authInstance.signOut();
+        await tempApp.delete();
+        tempApp = null;
+      }
+
+      return userModel;
+    } on FirebaseAuthException catch (e) {
+      print('❌ Error creando usuario: ${e.code} - ${e.message}');
+      throw _handleAuthException(e);
+    } catch (e) {
+      print('❌ Error inesperado creando usuario: $e');
+      throw Exception('Error al crear usuario: $e');
+    } finally {
+      if (tempApp != null) {
+        try {
+          await tempApp.delete();
+        } catch (_) {}
+      }
     }
   }
 
@@ -462,6 +469,80 @@ class AuthService {
   }
 
   // ==================== MANEJO DE ERRORES ====================
+
+  // ==================== GESTIÓN DE USUARIOS (ORGANIZACIÓN) ====================
+
+  Future<List<UserModel>> getUsers() async {
+    try {
+      print('📋 Obteniendo usuarios de Firestore...');
+      // Firebase: Obtener todos los documentos de 'users'
+      final snapshot = await _firestore.collection('users').get();
+      print('📋 Usuarios encontrados: ${snapshot.docs.length}');
+      
+      final users = snapshot.docs.map((doc) {
+        final data = doc.data();
+        final user = UserModel(
+          id: doc.id,
+          name: data['name'] ?? 'Usuario',
+          email: data['email'] ?? '',
+          role: data['role'] ?? 'vendedor',
+          createdAt: _parseDate(data['createdAt']),
+        );
+        print('👤 Usuario: ${user.name} (${user.email}) - Rol: ${user.role}');
+        return user;
+      }).toList();
+      
+      print('✅ Total de usuarios obtenidos: ${users.length}');
+      return users;
+    } catch (e) {
+      print('❌ Error obteniendo usuarios: $e');
+      print('❌ Stack trace: ${StackTrace.current}');
+      return [];
+    }
+  }
+
+  /// Actualizar el rol de un usuario (solo admin)
+  Future<void> updateUserRole(String userId, String newRole) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'role': newRole,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      print('✅ Rol actualizado exitosamente para usuario $userId');
+    } catch (e) {
+      print('❌ Error actualizando rol: $e');
+      throw Exception('Error al actualizar rol: $e');
+    }
+  }
+
+  /// Eliminar un usuario (solo admin)
+  Future<void> deleteUser(String userId) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser != null && currentUser.uid == userId) {
+        throw Exception('No puedes eliminar tu propia cuenta desde aquí');
+      }
+
+      // Eliminar de Firestore
+      await _firestore.collection('users').doc(userId).delete();
+
+      // Intentar eliminar de Firebase Auth (requiere privilegios de admin)
+      // Nota: Esto puede fallar si no tienes permisos de administrador en Firebase
+      try {
+        // En producción, esto requeriría usar Firebase Admin SDK
+        // Por ahora, solo eliminamos de Firestore
+        print(
+            '⚠️ Usuario eliminado de Firestore. Eliminación de Auth requiere Admin SDK');
+      } catch (e) {
+        print('⚠️ No se pudo eliminar de Auth (requiere Admin SDK): $e');
+      }
+
+      print('✅ Usuario eliminado exitosamente');
+    } catch (e) {
+      print('❌ Error eliminando usuario: $e');
+      throw Exception('Error al eliminar usuario: $e');
+    }
+  }
 
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
@@ -484,5 +565,11 @@ class AuthService {
       default:
         return 'Error de autenticación: ${e.message}';
     }
+  }
+
+  String? _parseDate(dynamic date) {
+    if (date is Timestamp) return date.toDate().toIso8601String();
+    if (date is String) return date;
+    return null;
   }
 }

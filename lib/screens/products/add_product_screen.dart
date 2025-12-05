@@ -4,9 +4,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import 'package:veon_app/models/product.dart';
 import 'package:veon_app/models/provider.dart';
+import 'package:veon_app/models/category.dart';
 import 'package:veon_app/screens/auth/constants/colors.dart';
 import 'package:veon_app/services/product_service.dart';
 import 'package:veon_app/services/provider_service.dart';
+import 'package:veon_app/services/category_service.dart';
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
@@ -30,10 +32,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
   String? _selectedProviderId;
   String? _selectedProviderName;
   String? _selectedUnitOfMeasurement;
+  int? _selectedCategoryId;
+  String? _selectedCategoryName;
   List<Provider> _providers = [];
+  List<Category> _categories = [];
+  bool _isValidatingSku = false;
 
   final ProductService _productService = ProductService();
   final ProviderService _providerService = ProviderService();
+  final CategoryService _categoryService = CategoryService.instance;
 
   final List<String> _unitsOfMeasurement = [
     'Piece',
@@ -50,6 +57,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   void initState() {
     super.initState();
     _loadProviders();
+    _loadCategories();
   }
 
   Future<void> _loadProviders() async {
@@ -57,6 +65,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
       final providers = await _providerService.getProviders();
       setState(() {
         _providers = providers;
+      });
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await _categoryService.getCategories();
+      setState(() {
+        _categories = categories;
       });
     } catch (e) {
       // Handle error silently
@@ -115,10 +134,30 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return null;
   }
 
-  String? _validateSKU(String? value) {
+  Future<String?> _validateSKU(String? value) async {
     if (value == null || value.trim().isEmpty) {
-      return 'SKU is required';
+      return 'SKU es requerido';
     }
+    
+    // Validar que solo contenga números y letras
+    final skuRegex = RegExp(r'^[a-zA-Z0-9]+$');
+    if (!skuRegex.hasMatch(value.trim())) {
+      return 'SKU solo puede contener números y letras';
+    }
+    
+    // Validar que sea único
+    setState(() => _isValidatingSku = true);
+    try {
+      final isUnique = await _productService.isSkuUnique(value.trim());
+      setState(() => _isValidatingSku = false);
+      if (!isUnique) {
+        return 'Este SKU ya está en uso';
+      }
+    } catch (e) {
+      setState(() => _isValidatingSku = false);
+      return 'Error validando SKU: $e';
+    }
+    
     return null;
   }
 
@@ -150,10 +189,23 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   Future<void> _handleConfirm() async {
+    // Validar SKU antes de proceder
+    final skuError = await _validateSKU(_skuController.text);
+    if (skuError != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(skuError),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       try {
         final product = Product(
-          id: const Uuid().v4(),
           name: _nameController.text.trim(),
           sku: _skuController.text.trim(),
           shortDescription: _shortDescriptionController.text.trim().isEmpty
@@ -167,6 +219,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
           salePrice: double.parse(_salePriceController.text.trim()),
           stock: 0,
           imagePath: _selectedImage?.path,
+          categoryId: _selectedCategoryId,
+          categoryName: _selectedCategoryName,
         );
 
         final success = await _productService.saveProduct(product);
@@ -316,8 +370,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 TextFormField(
                   controller: _skuController,
                   decoration: InputDecoration(
-                    hintText: 'SKU',
+                    hintText: 'SKU (solo números y letras)',
                     prefixIcon: const Icon(Icons.qr_code_outlined, color: AppColors.grey),
+                    suffixIcon: _isValidatingSku
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: Padding(
+                              padding: EdgeInsets.all(12.0),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryGreen),
+                              ),
+                            ),
+                          )
+                        : null,
                     filled: true,
                     fillColor: AppColors.white,
                     border: OutlineInputBorder(
@@ -333,7 +400,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
                     ),
                   ),
-                  validator: _validateSKU,
+                  validator: (value) {
+                    // Validación básica sincrónica
+                    if (value == null || value.trim().isEmpty) {
+                      return 'SKU es requerido';
+                    }
+                    final skuRegex = RegExp(r'^[a-zA-Z0-9]+$');
+                    if (!skuRegex.hasMatch(value.trim())) {
+                      return 'SKU solo puede contener números y letras';
+                    }
+                    return null;
+                  },
                   textInputAction: TextInputAction.next,
                 ),
 
@@ -362,6 +439,53 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   ),
                   textInputAction: TextInputAction.next,
                   maxLines: 2,
+                ),
+
+                const SizedBox(height: 20),
+
+                // Category Dropdown
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.lightGrey),
+                  ),
+                  child: DropdownButtonFormField<int>(
+                    value: _selectedCategoryId,
+                    decoration: InputDecoration(
+                      hintText: 'Categoría',
+                      prefixIcon: const Icon(Icons.category_outlined, color: AppColors.grey),
+                      suffixIcon: const Icon(Icons.arrow_drop_down, color: AppColors.grey),
+                      filled: true,
+                      fillColor: AppColors.white,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                    items: [
+                      const DropdownMenuItem<int>(
+                        value: null,
+                        child: Text('Seleccionar Categoría', style: TextStyle(color: AppColors.textSecondary)),
+                      ),
+                      ..._categories.map((category) {
+                        return DropdownMenuItem<int>(
+                          value: category.id,
+                          child: Text(category.name),
+                        );
+                      }),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCategoryId = value;
+                        if (value != null) {
+                          final category = _categories.firstWhere((c) => c.id == value);
+                          _selectedCategoryName = category.name;
+                        } else {
+                          _selectedCategoryName = null;
+                        }
+                      });
+                    },
+                  ),
                 ),
 
                 const SizedBox(height: 20),

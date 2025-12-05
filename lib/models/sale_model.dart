@@ -14,6 +14,7 @@ class Sale {
   final SaleStatus status;
   final String? notes; // Notas adicionales
   final String? quotationId; // Si viene de una cotización
+  final String? userId; // ID del vendedor
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool synced; // Para sincronización con Firebase
@@ -32,6 +33,7 @@ class Sale {
     this.status = SaleStatus.completed,
     this.notes,
     this.quotationId,
+    this.userId,
     required this.createdAt,
     required this.updatedAt,
     this.synced = false,
@@ -50,6 +52,7 @@ class Sale {
     SaleStatus status = SaleStatus.completed,
     String? notes,
     String? quotationId,
+    String? userId,
   }) {
     final subtotal = items.fold(0.0, (sum, item) => sum + item.total);
     final tax = subtotal * taxRate;
@@ -69,6 +72,7 @@ class Sale {
       status: status,
       notes: notes,
       quotationId: quotationId,
+      userId: userId,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       synced: false,
@@ -91,6 +95,7 @@ class Sale {
       'status': status.toString(),
       'notes': notes,
       'quotationId': quotationId,
+      'userId': userId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'synced': synced,
@@ -120,6 +125,7 @@ class Sale {
       ),
       notes: map['notes'],
       quotationId: map['quotationId'],
+      userId: map['userId'],
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
       synced: map['synced'] ?? false,
@@ -141,6 +147,7 @@ class Sale {
     SaleStatus? status,
     String? notes,
     String? quotationId,
+    String? userId,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? synced,
@@ -159,6 +166,7 @@ class Sale {
       status: status ?? this.status,
       notes: notes ?? this.notes,
       quotationId: quotationId ?? this.quotationId,
+      userId: userId ?? this.userId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       synced: synced ?? this.synced,
