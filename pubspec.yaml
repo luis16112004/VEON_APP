@@ -15,10 +15,16 @@ dependencies:
   shared_preferences: ^2.2.2
   uuid: ^4.3.3
   storybook_flutter: ^0.14.1
+  intl: ^0.19.0
 
-  # 🆕 DEPENDENCIAS PARA BASE DE DATOS
-  # Para conectar con MongoDB (cuando hay internet)
-  mongo_dart: ^0.10.3
+  # 🔥 DEPENDENCIAS PARA BASE DE DATOS FIREBASE
+  # Para conectar con Firebase Firestore (cuando hay internet)
+  firebase_core: ^3.6.0
+  cloud_firestore: ^5.4.4
+  firebase_auth: ^5.3.1
+
+  # Para autenticación con Google
+  google_sign_in: ^6.2.1
 
   # Para guardar datos localmente (sin internet)
   hive: ^2.2.3
@@ -26,6 +32,15 @@ dependencies:
 
   # Para detectar si hay conexión a internet
   connectivity_plus: ^6.0.5
+
+  # Para gráficas y visualización de datos
+  fl_chart: ^0.69.0
+  http: ^1.6.0
+  pdf: ^3.11.3
+  printing: ^5.14.2
+  excel: ^4.0.6
+  path_provider: ^2.1.5
+  open_file: ^3.5.10
 
 dev_dependencies:
   flutter_test:

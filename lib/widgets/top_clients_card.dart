@@ -1,12 +1,44 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:veon_app/screens/auth/constants/colors.dart';
+import 'package:veon_app/models/client.dart';
 
 class TopClientsCard extends StatelessWidget {
-  const TopClientsCard({super.key});
+  final List<Client>? clients;
+
+  const TopClientsCard({super.key, this.clients});
 
   @override
   Widget build(BuildContext context) {
+    // Calcular datos reales si hay clientes
+    List<Map<String, dynamic>> clientData = [];
+    if (clients != null && clients!.isNotEmpty) {
+      // Tomar top 3 clientes por número de ventas
+      final sortedClients = List<Client>.from(clients!);
+      sortedClients.sort((a, b) => b.salesCount.compareTo(a.salesCount));
+      final topClients = sortedClients.take(3).toList();
+      
+      final totalSales = topClients.fold<int>(0, (sum, client) => sum + client.salesCount);
+      
+      if (totalSales > 0) {
+        clientData = topClients.map((client) {
+          final percentage = (client.salesCount / totalSales * 100).round();
+          return {
+            'name': client.companyName ?? client.fullName,
+            'percentage': percentage,
+            'sales': client.salesCount,
+          };
+        }).toList();
+      }
+    }
+
+    // Si no hay datos, usar datos de ejemplo
+    if (clientData.isEmpty) {
+      clientData = [
+        {'name': 'No clients yet', 'percentage': 0, 'sales': 0},
+      ];
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -32,7 +64,7 @@ class TopClientsCard extends StatelessWidget {
                 width: 120,
                 height: 120,
                 child: CustomPaint(
-                  painter: DonutChartPainter(),
+                  painter: DonutChartPainter(clientData: clientData),
                 ),
               ),
               const SizedBox(width: 24),
@@ -40,13 +72,32 @@ class TopClientsCard extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildLegend('60%', 'Walmart', const Color(0xFF5B4FB8)),
-                    const SizedBox(height: 8),
-                    _buildLegend('40%', 'El Zorro', const Color(0xFF8DD4C3)),
-                    const SizedBox(height: 8),
-                    _buildLegend('20%', 'Externos', AppColors.white),
-                  ],
+                  children: clientData.isEmpty
+                      ? [
+                          const Text(
+                            'No data',
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ]
+                      : clientData.take(3).map((data) {
+                          final index = clientData.indexOf(data);
+                          final colors = [
+                            const Color(0xFF5B4FB8),
+                            const Color(0xFF8DD4C3),
+                            AppColors.white,
+                          ];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _buildLegend(
+                              '${data['percentage']}%',
+                              data['name'] as String,
+                              colors[index % colors.length],
+                            ),
+                          );
+                        }).toList(),
                 ),
               ),
             ],
@@ -75,12 +126,15 @@ class TopClientsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            name,
-            style: TextStyle(
-              color: color == AppColors.white ? AppColors.textPrimary : AppColors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+          Flexible(
+            child: Text(
+              name,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color == AppColors.white ? AppColors.textPrimary : AppColors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -90,6 +144,10 @@ class TopClientsCard extends StatelessWidget {
 }
 
 class DonutChartPainter extends CustomPainter {
+  final List<Map<String, dynamic>> clientData;
+
+  DonutChartPainter({required this.clientData});
+
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
@@ -101,31 +159,52 @@ class DonutChartPainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    // Background circle
-    paint.color = const Color(0xFF8DD4C3);
-    canvas.drawCircle(center, radius - strokeWidth / 2, paint);
+    if (clientData.isEmpty || clientData[0]['percentage'] == 0) {
+      // Círculo vacío
+      paint.color = const Color(0xFF8DD4C3);
+      canvas.drawCircle(center, radius - strokeWidth / 2, paint);
+      return;
+    }
 
-    // Purple segment (60% = 216 degrees)
-    paint.color = const Color(0xFF5B4FB8);
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
-      -math.pi / 2,
-      2 * math.pi * 0.6,
-      false,
-      paint,
-    );
+    // Colores para los segmentos
+    final colors = [
+      const Color(0xFF5B4FB8),
+      const Color(0xFF8DD4C3),
+      const Color(0xFFB8E6D9),
+    ];
 
-    // Light green segment (40% = 144 degrees)
-    paint.color = const Color(0xFFB8E6D9);
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
-      -math.pi / 2 + 2 * math.pi * 0.6,
-      2 * math.pi * 0.2,
-      false,
-      paint,
-    );
+    double startAngle = -math.pi / 2;
+    
+    for (int i = 0; i < clientData.length && i < 3; i++) {
+      final percentage = (clientData[i]['percentage'] as int) / 100.0;
+      final sweepAngle = 2 * math.pi * percentage;
+
+      paint.color = colors[i % colors.length];
+      
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
+        startAngle,
+        sweepAngle,
+        false,
+        paint,
+      );
+
+      startAngle += sweepAngle;
+    }
+
+    // Relleno para el resto del círculo
+    if (startAngle < -math.pi / 2 + 2 * math.pi) {
+      paint.color = const Color(0xFF8DD4C3);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
+        startAngle,
+        -math.pi / 2 + 2 * math.pi - startAngle,
+        false,
+        paint,
+      );
+    }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

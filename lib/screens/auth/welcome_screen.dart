@@ -22,11 +22,11 @@ class WelcomeScreen extends StatelessWidget {
           // Contenido Principal
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   // --- ESTE ES EL CAMBIO ---
                   // Reemplazamos el Spacer por un SizedBox de altura fija.
                   // Puedes ajustar el 80.0 si lo quieres más arriba (ej. 60.0)

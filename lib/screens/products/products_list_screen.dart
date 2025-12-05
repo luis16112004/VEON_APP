@@ -109,20 +109,30 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
   }
 
   Future<void> _deleteProduct(Product product) async {
+    if (product.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: El producto no tiene ID'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Product'),
-        content: Text('Are you sure you want to delete ${product.name}?'),
+        title: const Text('Eliminar Producto'),
+        content: Text('¿Estás seguro de que deseas eliminar ${product.name}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Cancelar'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
-              'Delete',
+              'Eliminar',
               style: TextStyle(color: AppColors.error),
             ),
           ),
@@ -132,12 +142,12 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
 
     if (confirmed == true) {
       try {
-        final success = await _productService.deleteProduct(product.id);
+        final success = await _productService.deleteProduct(product.id!);
         if (success) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Product deleted successfully'),
+                content: Text('Producto eliminado exitosamente'),
                 backgroundColor: AppColors.success,
               ),
             );
@@ -147,7 +157,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Error deleting product'),
+                content: Text('Error eliminando producto'),
                 backgroundColor: AppColors.error,
               ),
             );
@@ -180,7 +190,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'All Products',
+                      'Productos',
                       style: TextStyle(
                         color: AppColors.white,
                         fontSize: 24,
@@ -218,7 +228,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: 'Search product...',
+                          hintText: 'Buscar producto...',
                           hintStyle: TextStyle(
                             color: AppColors.textHint,
                             fontSize: 14,
@@ -280,8 +290,8 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                               const SizedBox(height: 16),
                               Text(
                                 _products.isEmpty
-                                    ? 'No products registered'
-                                    : 'No products found',
+                                    ? 'No hay productos registrados'
+                                    : 'No se encontraron productos',
                                 style: TextStyle(
                                   color: AppColors.grey,
                                   fontSize: 16,

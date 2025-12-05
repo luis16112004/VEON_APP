@@ -1,83 +1,78 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veon_app/models/client.dart';
+import 'package:veon_app/database/sync_service.dart';
 
 class ClientService {
-  static const String _clientsKey = 'clients';
+  static const String _collectionName = 'clients';
+  final _syncService = SyncService.instance;
 
   Future<List<Client>> getClients() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final clientsJson = prefs.getString(_clientsKey);
-      
-      if (clientsJson == null) {
-        return [];
-      }
-
-      final List<dynamic> clientsList = json.decode(clientsJson);
-      return clientsList.map((json) => Client.fromJson(json)).toList();
+      final docs = await _syncService.getDocuments(_collectionName);
+      return docs.map((doc) => Client.fromJson(doc)).toList();
     } catch (e) {
+      print('❌ Error obteniendo clientes: $e');
       return [];
+    }
+  }
+
+  /// Verificar si un correo ya existe
+  Future<bool> isEmailUnique(String email, {String? excludeId}) async {
+    try {
+      final clients = await getClients();
+      return !clients.any((c) => 
+        c.email.toLowerCase() == email.toLowerCase() && 
+        (excludeId == null || c.id != excludeId)
+      );
+    } catch (e) {
+      print('❌ Error verificando correo único: $e');
+      return false;
     }
   }
 
   Future<bool> saveClient(Client client) async {
     try {
-      final clients = await getClients();
-      clients.add(client);
-      
-      final prefs = await SharedPreferences.getInstance();
-      final clientsJson = json.encode(
-        clients.map((c) => c.toJson()).toList(),
-      );
-      
-      return await prefs.setString(_clientsKey, clientsJson);
+      // Validar correo único
+      final isUnique = await isEmailUnique(client.email);
+      if (!isUnique) {
+        throw Exception('El correo ${client.email} ya está registrado');
+      }
+
+      await _syncService.saveDocument(_collectionName, client.toJson(),
+          id: client.id);
+      print('✅ Cliente guardado: ${client.fullName}');
+      return true;
     } catch (e) {
-      return false;
+      print('❌ Error guardando cliente: $e');
+      rethrow;
     }
   }
 
   Future<bool> updateClient(Client client) async {
     try {
-      final clients = await getClients();
-      final index = clients.indexWhere((c) => c.id == client.id);
-      
-      if (index == -1) {
-        return false;
+      // Validar correo único (excluyendo el cliente actual)
+      final isUnique = await isEmailUnique(client.email, excludeId: client.id);
+      if (!isUnique) {
+        throw Exception('El correo ${client.email} ya está registrado');
       }
 
-      clients[index] = client;
-      
-      final prefs = await SharedPreferences.getInstance();
-      final clientsJson = json.encode(
-        clients.map((c) => c.toJson()).toList(),
-      );
-      
-      return await prefs.setString(_clientsKey, clientsJson);
+      await _syncService.updateDocument(
+          _collectionName, client.id, client.toJson());
+      print('✅ Cliente actualizado: ${client.fullName}');
+      return true;
     } catch (e) {
-      return false;
+      print('❌ Error actualizando cliente: $e');
+      rethrow;
     }
   }
 
   Future<bool> deleteClient(String clientId) async {
     try {
-      final clients = await getClients();
-      clients.removeWhere((c) => c.id == clientId);
-      
-      final prefs = await SharedPreferences.getInstance();
-      final clientsJson = json.encode(
-        clients.map((c) => c.toJson()).toList(),
-      );
-      
-      return await prefs.setString(_clientsKey, clientsJson);
+      await _syncService.deleteDocument(_collectionName, clientId);
+      print('✅ Cliente eliminado: $clientId');
+      return true;
     } catch (e) {
+      print('❌ Error eliminando cliente: $e');
       return false;
     }
   }
 }
-
-
-
-
-
-

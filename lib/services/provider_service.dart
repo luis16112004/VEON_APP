@@ -1,77 +1,83 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veon_app/models/provider.dart';
+import 'package:veon_app/database/sync_service.dart';
 
 class ProviderService {
-  static const String _providersKey = 'providers';
+  static const String _collectionName = 'providers';
+  final _syncService = SyncService.instance;
 
   Future<List<Provider>> getProviders() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final providersJson = prefs.getString(_providersKey);
-      
-      if (providersJson == null) {
-        return [];
-      }
-
-      final List<dynamic> providersList = json.decode(providersJson);
-      return providersList.map((json) => Provider.fromJson(json)).toList();
+      // Usar Firebase directamente
+      final docs = await _syncService.getDocuments(_collectionName);
+      return docs.map((doc) => Provider.fromJson(doc)).toList();
     } catch (e) {
+      print('❌ Error obteniendo proveedores: $e');
       return [];
+    }
+  }
+
+  /// Verificar si un correo ya existe
+  Future<bool> isEmailUnique(String email, {String? excludeId}) async {
+    try {
+      final providers = await getProviders();
+      return !providers.any((p) => 
+        p.email.toLowerCase() == email.toLowerCase() && 
+        (excludeId == null || p.id != excludeId)
+      );
+    } catch (e) {
+      print('❌ Error verificando correo único: $e');
+      return false;
     }
   }
 
   Future<bool> saveProvider(Provider provider) async {
     try {
-      final providers = await getProviders();
-      providers.add(provider);
-      
-      final prefs = await SharedPreferences.getInstance();
-      final providersJson = json.encode(
-        providers.map((p) => p.toJson()).toList(),
-      );
-      
-      return await prefs.setString(_providersKey, providersJson);
+      // Validar correo único
+      final isUnique = await isEmailUnique(provider.email);
+      if (!isUnique) {
+        throw Exception('El correo ${provider.email} ya está registrado');
+      }
+
+      // Usar Firebase directamente
+      await _syncService.saveDocument(_collectionName, provider.toJson(),
+          id: provider.id);
+      print('✅ Proveedor guardado: ${provider.companyName}');
+      return true;
     } catch (e) {
-      return false;
+      print('❌ Error guardando proveedor: $e');
+      rethrow;
     }
   }
 
   Future<bool> updateProvider(Provider provider) async {
     try {
-      final providers = await getProviders();
-      final index = providers.indexWhere((p) => p.id == provider.id);
-      
-      if (index == -1) {
-        return false;
+      // Validar correo único (excluyendo el proveedor actual)
+      final isUnique = await isEmailUnique(provider.email, excludeId: provider.id);
+      if (!isUnique) {
+        throw Exception('El correo ${provider.email} ya está registrado');
       }
 
-      providers[index] = provider;
-      
-      final prefs = await SharedPreferences.getInstance();
-      final providersJson = json.encode(
-        providers.map((p) => p.toJson()).toList(),
-      );
-      
-      return await prefs.setString(_providersKey, providersJson);
+      // Usar Firebase directamente
+      await _syncService.updateDocument(
+          _collectionName, provider.id, provider.toJson());
+      print('✅ Proveedor actualizado: ${provider.companyName}');
+      return true;
     } catch (e) {
-      return false;
+      print('❌ Error actualizando proveedor: $e');
+      rethrow;
     }
   }
 
   Future<bool> deleteProvider(String providerId) async {
     try {
-      final providers = await getProviders();
-      providers.removeWhere((p) => p.id == providerId);
-      
-      final prefs = await SharedPreferences.getInstance();
-      final providersJson = json.encode(
-        providers.map((p) => p.toJson()).toList(),
-      );
-      
-      return await prefs.setString(_providersKey, providersJson);
+      // Usar Firebase directamente
+      await _syncService.deleteDocument(_collectionName, providerId);
+      print('✅ Proveedor eliminado: $providerId');
+      return true;
     } catch (e) {
+      print('❌ Error eliminando proveedor: $providerId');
       return false;
     }
   }
+
 }

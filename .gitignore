@@ -1,19 +1,13 @@
 # Miscellaneous
-**/generated_plugin_registrant.cc
-**/generated_plugin_registrant.dart
-**/generated_plugins.cmake
-**/GeneratedPluginRegistrant.swift
 *.class
 *.log
 *.pyc
 *.swp
 .DS_Store
 .atom/
-.build/
 .buildlog/
 .history
 .svn/
-.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -33,6 +27,7 @@ migrate_working_dir/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
 /build/
@@ -47,3 +42,47 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Variables de entorno con credenciales
+.env
+.env.local
+.env.*.local
+
+# Firebase
+firebase-debug.log
+.firebase/
+.firebaserc.local
+
+# Firebase Functions
+functions/node_modules/
+functions/lib/
+functions/.env
+functions/.env.local
+
+# Archivos de configuración sensibles
+google-services.json
+GoogleService-Info.plist
+serviceAccountKey.json
+# --- Firebase y Secretos ---
+
+# 1. Archivos de configuración de Firebase (Si decides no subirlos)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+
+# 2. Variables de entorno (MUY IMPORTANTE si usas .env)
+.env
+.env.development
+.env.production
+
+# 3. Archivos temporales de Firebase
+.firebase/
+firebase-debug.log
+
+# Ignorar configuración de Firebase
+lib/firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# Ignorar variables de entorno
+.env

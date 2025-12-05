@@ -1,0 +1,24 @@
+-- Script para crear la tabla de productos en PostgreSQL
+-- Basado en el modelo Product de la aplicación Flutter
+
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    sku VARCHAR(100) NOT NULL UNIQUE,
+    short_description TEXT,
+    provider_id VARCHAR(100),
+    provider_name VARCHAR(255),
+    unit VARCHAR(50),
+    unit_of_measurement VARCHAR(50),
+    cost DECIMAL(10, 2) NOT NULL,
+    sale_price DECIMAL(10, 2) NOT NULL,
+    stock INTEGER NOT NULL DEFAULT 0,
+    image_path TEXT,
+    category_id INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices recomendados
+CREATE INDEX idx_products_category_id ON products(category_id);
+CREATE INDEX idx_products_provider_id ON products(provider_id);
