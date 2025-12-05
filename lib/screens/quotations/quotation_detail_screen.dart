@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../models/quotation_model.dart';
 import '../../models/sale_model.dart';
 import '../../services/quotation_service.dart';
+import '../../services/auth_service.dart';
+import '../../services/permission_service.dart';
 
 class QuotationDetailScreen extends StatefulWidget {
   final String quotationId;
@@ -20,13 +22,24 @@ class QuotationDetailScreen extends StatefulWidget {
 
 class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
   final _quotationService = QuotationService();
+  final _authService = AuthService.instance;
+  final _permissionService = PermissionService.instance;
   Quotation? _quotation;
   bool _isLoading = false;
+  bool _canEditQuotation = false;
 
   @override
   void initState() {
     super.initState();
+    _checkPermissions();
     _loadQuotation();
+  }
+
+  Future<void> _checkPermissions() async {
+    final user = await _authService.getCurrentUser();
+    setState(() {
+      _canEditQuotation = _permissionService.canEditQuotation(user);
+    });
   }
 
   Future<void> _loadQuotation() async {
@@ -51,7 +64,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
         backgroundColor: const Color(0xFF1E293B),
         foregroundColor: Colors.white,
         actions: [
-          if (_quotation != null && _quotation!.status != QuotationStatus.converted)
+          if (_quotation != null && _quotation!.status != QuotationStatus.converted && _canEditQuotation)
             PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'approve') {

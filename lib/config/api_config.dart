@@ -2,8 +2,9 @@
 /// Permite cambiar entre Firebase y Laravel API
 class ApiConfig {
   // URL base de Laravel API
-  static const String laravelBaseUrl = 'http://192.168.3.95:8000/api';
-
+  static const String laravelBaseUrl =
+      'https://api-production-aa3d.up.railway.app/api';
+  static const String fastApiBaseUrl = 'https://veon-pos.onrender.com';
   // Toggle para activar/desactivar Laravel API
   // true = usar Laravel API para login, register y providers
   // false = usar Firebase (comportamiento actual)

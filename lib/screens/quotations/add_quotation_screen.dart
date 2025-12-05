@@ -81,38 +81,38 @@ class _AddQuotationScreenState extends State<AddQuotationScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildClientSelector(),
-                    const SizedBox(height: 24),
-                    _buildValidDaysSelector(),
-                    const SizedBox(height: 24),
-                    _buildProductsList(),
-                    const SizedBox(height: 16),
-                    _buildAddProductButton(),
-                    const SizedBox(height: 24),
-                    _buildDiscountField(),
-                    const SizedBox(height: 24),
-                    _buildNotesField(),
-                    const SizedBox(height: 24),
-                    _buildTermsField(),
-                    const SizedBox(height: 24),
-                    _buildTotalsSummary(),
-                  ],
-                ),
+              key: _formKey,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildClientSelector(),
+                          const SizedBox(height: 24),
+                          _buildValidDaysSelector(),
+                          const SizedBox(height: 24),
+                          _buildProductsList(),
+                          const SizedBox(height: 16),
+                          _buildAddProductButton(),
+                          const SizedBox(height: 24),
+                          _buildDiscountField(),
+                          const SizedBox(height: 24),
+                          _buildNotesField(),
+                          const SizedBox(height: 24),
+                          _buildTermsField(),
+                          const SizedBox(height: 24),
+                          _buildTotalsSummary(),
+                        ],
+                      ),
+                    ),
+                  ),
+                  _buildSaveButton(),
+                ],
               ),
             ),
-            _buildSaveButton(),
-          ],
-        ),
-      ),
     );
   }
 
@@ -397,7 +397,8 @@ class _AddQuotationScreenState extends State<AddQuotationScreen> {
         children: [
           _buildTotalRow('Subtotal:', _subtotal),
           const SizedBox(height: 8),
-          _buildTotalRow('IVA (${(_taxRate * 100).toStringAsFixed(0)}%):', _tax),
+          _buildTotalRow(
+              'IVA (${(_taxRate * 100).toStringAsFixed(0)}%):', _tax),
           const SizedBox(height: 8),
           _buildTotalRow('Descuento:', -_discount, color: Colors.red),
           const Divider(height: 24),
@@ -414,12 +415,12 @@ class _AddQuotationScreenState extends State<AddQuotationScreen> {
   }
 
   Widget _buildTotalRow(
-      String label,
-      double amount, {
-        bool isBold = false,
-        double fontSize = 16,
-        Color? color,
-      }) {
+    String label,
+    double amount, {
+    bool isBold = false,
+    double fontSize = 16,
+    Color? color,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -530,11 +531,13 @@ class _AddQuotationScreenState extends State<AddQuotationScreen> {
               onPressed: () {
                 if (selectedProduct != null && quantity > 0) {
                   final item = QuotationItem.create(
-                    productId: selectedProduct!.id,
+                    productId: selectedProduct!.id?.toString() ?? '',
                     productName: selectedProduct!.name,
                     sku: selectedProduct!.sku,
                     quantity: quantity,
-                    unit: selectedProduct!.id,
+                    unit: selectedProduct!.unitOfMeasurement ??
+                        selectedProduct!.unit ??
+                        'Unit',
                     unitPrice: selectedProduct!.salePrice,
                   );
 

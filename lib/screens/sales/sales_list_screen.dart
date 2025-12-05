@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/sale_model.dart';
 import '../../services/sale_service.dart';
+import '../../services/auth_service.dart';
+import '../../services/permission_service.dart';
 import 'add_sale_screen.dart';
 import 'sale_detail_screen.dart';
 
@@ -16,17 +18,30 @@ class SalesListScreen extends StatefulWidget {
 
 class _SalesListScreenState extends State<SalesListScreen> {
   final _saleService = SaleService();
+  final _authService = AuthService.instance;
+  final _permissionService = PermissionService.instance;
   List<Sale> _sales = [];
   List<Sale> _filteredSales = [];
   bool _isLoading = false;
   String _searchQuery = '';
   SaleStatus? _filterStatus;
   DateTimeRange? _dateRange;
+  bool _canCreateSale = false;
+  bool _canEditSale = false;
 
   @override
   void initState() {
     super.initState();
+    _checkPermissions();
     _loadSales();
+  }
+
+  Future<void> _checkPermissions() async {
+    final user = await _authService.getCurrentUser();
+    setState(() {
+      _canCreateSale = _permissionService.canCreateSale(user);
+      _canEditSale = _permissionService.canEditSale(user);
+    });
   }
 
   Future<void> _loadSales() async {
@@ -100,20 +115,22 @@ class _SalesListScreenState extends State<SalesListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'sales_fab',
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AddSaleScreen()),
-          );
-          _loadSales();
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Nueva Venta'),
-        backgroundColor: const Color(0xFF10B981),
-        foregroundColor: Colors.white,
-      ),
+      floatingActionButton: _canCreateSale
+          ? FloatingActionButton.extended(
+              heroTag: 'sales_fab',
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddSaleScreen()),
+                );
+                _loadSales();
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Nueva Venta'),
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+            )
+          : null,
     );
   }
 

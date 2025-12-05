@@ -4,6 +4,7 @@ import '../models/sale_model.dart';
 import '../database/local_storage.dart';
 import '../database/sync_service.dart';
 import 'product_service.dart';
+import 'auth_service.dart';
 
 class SaleService {
   static final SaleService _instance = SaleService._internal();
@@ -20,9 +21,13 @@ class SaleService {
   Future<Sale> createSale(Sale sale) async {
     print('📝 Creando venta: ${sale.id}');
 
+    // Obtener usuario actual para asignar la venta
+    final currentUser = await AuthService.instance.getCurrentUser();
+    final saleWithUser = sale.copyWith(userId: currentUser?.id);
+
     try {
       // PASO 1: Validar stock antes de procesar la venta
-      for (var item in sale.items) {
+      for (var item in saleWithUser.items) {
         final product = await _productService.getProductById(item.productId);
         if (product == null) {
           throw Exception('Producto no encontrado: ${item.productName}');
@@ -44,24 +49,24 @@ class SaleService {
 
       // PASO 2: Guardar localmente
       await LocalStorage.instance
-          .saveLocal(_collectionName, sale.id, sale.toMap());
+          .saveLocal(_collectionName, saleWithUser.id, saleWithUser.toMap());
       print('✅ Venta guardada localmente');
 
       // PASO 3: Actualizar inventario
-      await _updateInventoryForSale(sale);
+      await _updateInventoryForSale(saleWithUser);
       print('✅ Inventario actualizado');
 
       // PASO 4: Sincronizar usando SyncService (maneja Firebase automáticamente)
-      await _syncService.saveDocument(_collectionName, sale.toMap(),
-          id: sale.id);
+      await _syncService.saveDocument(_collectionName, saleWithUser.toMap(),
+          id: saleWithUser.id);
       print('✅ Venta guardada y sincronizada');
 
       // Marcar como sincronizada si está online
       if (_syncService.isOnline) {
-        return sale.copyWith(synced: true);
+        return saleWithUser.copyWith(synced: true);
       } else {
         print('📦 Venta en cola de sincronización');
-        return sale;
+        return saleWithUser;
       }
     } catch (e) {
       print('❌ Error creando venta: $e');
