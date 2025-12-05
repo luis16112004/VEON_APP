@@ -14,6 +14,7 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
   final _authService = AuthService.instance;
   bool _isLoading = false;
   List<UserModel> _users = [];
+  UserModel? _currentUser;
 
   @override
   void initState() {
@@ -25,9 +26,11 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
     setState(() => _isLoading = true);
     try {
       final users = await _authService.getUsers();
+      final currentUser = await _authService.getCurrentUser();
       if (mounted) {
         setState(() {
           _users = users;
+          _currentUser = currentUser;
           _isLoading = false;
         });
       }
@@ -125,10 +128,11 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
                       dropdownColor: const Color(0xFF3A3A3A),
                       isExpanded: true,
                       underline: Container(height: 1, color: Colors.grey),
-                      items: const [
-                        DropdownMenuItem(value: 'vendedor', child: Text('Vendedor', style: TextStyle(color: Colors.white))),
-                        DropdownMenuItem(value: 'gerente', child: Text('Gerente', style: TextStyle(color: Colors.white))),
-                        DropdownMenuItem(value: 'admin', child: Text('Admin', style: TextStyle(color: Colors.white))),
+                      items: [
+                        const DropdownMenuItem(value: 'vendedor', child: Text('Vendedor', style: TextStyle(color: Colors.white))),
+                        const DropdownMenuItem(value: 'gerente', child: Text('Gerente', style: TextStyle(color: Colors.white))),
+                        if (_currentUser?.role == 'admin')
+                          const DropdownMenuItem(value: 'admin', child: Text('Admin', style: TextStyle(color: Colors.white))),
                       ],
                       onChanged: (value) {
                         if (value != null) setState(() => selectedRole = value);
@@ -224,10 +228,11 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
                     dropdownColor: const Color(0xFF3A3A3A),
                     isExpanded: true,
                     underline: Container(height: 1, color: Colors.grey),
-                    items: const [
-                      DropdownMenuItem(value: 'vendedor', child: Text('Vendedor', style: TextStyle(color: Colors.white))),
-                      DropdownMenuItem(value: 'gerente', child: Text('Gerente', style: TextStyle(color: Colors.white))),
-                      DropdownMenuItem(value: 'admin', child: Text('Admin', style: TextStyle(color: Colors.white))),
+                    items: [
+                      const DropdownMenuItem(value: 'vendedor', child: Text('Vendedor', style: TextStyle(color: Colors.white))),
+                      const DropdownMenuItem(value: 'gerente', child: Text('Gerente', style: TextStyle(color: Colors.white))),
+                      if (_currentUser?.role == 'admin')
+                        const DropdownMenuItem(value: 'admin', child: Text('Admin', style: TextStyle(color: Colors.white))),
                     ],
                     onChanged: isUpdating ? null : (value) {
                       if (value != null) setState(() => selectedRole = value);
@@ -414,38 +419,39 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert, color: Colors.white),
-                          onSelected: (value) async {
-                            if (value == 'edit') {
-                              await _showEditRoleDialog(user);
-                            } else if (value == 'delete') {
-                              await _showDeleteUserDialog(user);
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'edit',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.edit, color: Colors.blue, size: 20),
-                                  SizedBox(width: 8),
-                                  Text('Editar Rol'),
-                                ],
+                        if (_currentUser?.role == 'admin' || (_currentUser?.role == 'gerente' && user.role != 'admin'))
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert, color: Colors.white),
+                            onSelected: (value) async {
+                              if (value == 'edit') {
+                                await _showEditRoleDialog(user);
+                              } else if (value == 'delete') {
+                                await _showDeleteUserDialog(user);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.edit, color: Colors.blue, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('Editar Rol'),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.delete, color: Colors.red, size: 20),
-                                  SizedBox(width: 8),
-                                  Text('Eliminar', style: TextStyle(color: Colors.red)),
-                                ],
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete, color: Colors.red, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('Eliminar', style: TextStyle(color: Colors.red)),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
                       ],
                     ),
                   ),

@@ -65,12 +65,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final missingUserIds = salesUserIds.where((id) => !userMap.containsKey(id));
       
       // Create placeholder users for missing IDs
-      final ghostUsers = missingUserIds.map((id) => UserModel(
-        id: id!,
-        name: 'Vendedor (ID: ${id.substring(0, 4)}...)',
-        email: '',
-        role: 'vendedor',
-      )).toList();
+      final ghostUsers = missingUserIds.map((id) {
+        // Si por alguna razón el usuario existe en userMap, usarlo
+        final user = userMap[id] ?? UserModel(
+          id: id!,
+          name: 'Vendedor (ID: ${id.substring(0, 4)}...)',
+          email: '',
+          role: 'vendedor',
+        );
+        return user;
+      }).toList();
+
       
       // Combine real users and ghost users
       final potentialSellers = [...allUsers, ...ghostUsers];
@@ -163,11 +168,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.dark(
               primary: AppColors.primaryGreen,
-              onPrimary: Colors.white,
-              surface: Color(0xFF2A2A2A),
+              onPrimary: Colors.black, // Texto negro en botones seleccionados
+              surface: Color(0xFF303030), // Fondo un poco más claro
               onSurface: Colors.white,
             ),
-            dialogBackgroundColor: const Color(0xFF2A2A2A),
+            dialogBackgroundColor: const Color(0xFF303030),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primaryGreen, // Color de botones de acción
+              ),
+            ),
           ),
           child: child!,
         );

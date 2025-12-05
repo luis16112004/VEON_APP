@@ -76,13 +76,13 @@ class PermissionService {
   /// Verificar si el usuario puede gestionar usuarios
   bool canManageUsers(UserModel? user) {
     if (user == null) return false;
-    return user.role.toLowerCase() == 'admin';
+    return ['admin', 'gerente'].contains(user.role.toLowerCase());
   }
 
   /// Verificar si el usuario puede ver reportes
   bool canViewReports(UserModel? user) {
     if (user == null) return false;
-    return ['admin', 'gerente'].contains(user.role.toLowerCase());
+    return ['admin', 'gerente', 'vendedor'].contains(user.role.toLowerCase());
   }
 
   /// Verificar si el usuario es admin

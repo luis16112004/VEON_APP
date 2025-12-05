@@ -134,9 +134,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const Text(
-                                      'Administrator',
-                                      style: TextStyle(
+                                    Text(
+                                      _currentUser?.role ?? 'Usuario',
+                                      style: const TextStyle(
                                         color: AppColors.grey,
                                         fontSize: 12,
                                       ),

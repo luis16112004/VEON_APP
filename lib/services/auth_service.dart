@@ -108,7 +108,7 @@ class AuthService {
           name: userData['name'] ?? user.displayName ?? 'Usuario',
           email: user.email ?? email,
           role: userData['role'] ?? 'vendedor',
-          createdAt: userData['createdAt'],
+          createdAt: _parseDate(userData['createdAt']),
         );
 
         print('✅ Login exitoso: ${user.email} (${userModel.role})');
@@ -185,7 +185,7 @@ class AuthService {
           name: userData['name'] ?? user.displayName ?? 'Usuario',
           email: user.email ?? '',
           role: userData['role'] ?? 'vendedor',
-          createdAt: userData['createdAt'],
+          createdAt: _parseDate(userData['createdAt']),
         );
       } else {
         // Nuevo usuario, crear documento en Firestore
@@ -234,7 +234,7 @@ class AuthService {
           name: userData['name'] ?? user.displayName ?? 'Usuario',
           email: user.email ?? '',
           role: userData['role'] ?? 'vendedor',
-          createdAt: userData['createdAt'],
+          createdAt: _parseDate(userData['createdAt']),
         );
       } else {
         // Si no existe en Firestore, crear documento básico
@@ -486,7 +486,7 @@ class AuthService {
           name: data['name'] ?? 'Usuario',
           email: data['email'] ?? '',
           role: data['role'] ?? 'vendedor',
-          createdAt: data['createdAt'],
+          createdAt: _parseDate(data['createdAt']),
         );
         print('👤 Usuario: ${user.name} (${user.email}) - Rol: ${user.role}');
         return user;
@@ -565,5 +565,11 @@ class AuthService {
       default:
         return 'Error de autenticación: ${e.message}';
     }
+  }
+
+  String? _parseDate(dynamic date) {
+    if (date is Timestamp) return date.toDate().toIso8601String();
+    if (date is String) return date;
+    return null;
   }
 }

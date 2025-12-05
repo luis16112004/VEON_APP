@@ -344,8 +344,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Organización - solo para admin
-                    if (_currentUser != null && PermissionService.instance.isAdmin(_currentUser))
+                    // Organización - solo para admin y gerente
+                    if (_currentUser != null && PermissionService.instance.canManageUsers(_currentUser))
                       _buildProfileOption(
                         icon: Icons.business_outlined,
                         iconColor: Colors.orange,
@@ -361,7 +361,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         },
                       ),
 
-                    if (_currentUser != null && PermissionService.instance.isAdmin(_currentUser))
+                    if (_currentUser != null && PermissionService.instance.canManageUsers(_currentUser))
                       const SizedBox(height: 16),
 
                     // Cambiar contraseña - disponible para todos
