@@ -169,10 +169,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
             colorScheme: const ColorScheme.dark(
               primary: AppColors.primaryGreen,
               onPrimary: Colors.black, // Texto negro en botones seleccionados
-              surface: Color(0xFF303030), // Fondo un poco más claro
+              surface: const Color(0xFF1E1E1E), // Fondo un poco más claro
               onSurface: Colors.white,
             ),
-            dialogBackgroundColor: const Color(0xFF303030),
+            dialogBackgroundColor: const Color(0xFF1E1E1E),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.primaryGreen, // Color de botones de acción
