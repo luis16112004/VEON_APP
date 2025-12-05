@@ -158,39 +158,40 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Future<void> _selectDateRange() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: _dateRange,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.primaryGreen,
-              onPrimary: Colors.black, // Texto negro en botones seleccionados
-              surface: const Color(0xFF1E1E1E), // Fondo un poco más claro
-              onSurface: Colors.white,
-            ),
-            dialogBackgroundColor: const Color(0xFF1E1E1E),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primaryGreen, // Color de botones de acción
-              ),
-            ),
+  final picked = await showDateRangePicker(
+    context: context,
+    firstDate: DateTime(2020),
+    lastDate: DateTime.now(),
+    initialDateRange: _dateRange,
+    saveText: 'Aceptar',
+    helpText: 'Selecciona el rango de fechas',
+    builder: (context, child) {
+      return Theme(
+        data: ThemeData.dark().copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: AppColors.primaryGreen,
+            onPrimary: Colors.white,
+            surface: Color(0xFF1E1E1E),
+            onSurface: Colors.white,
           ),
-          child: child!,
-        );
-      },
-    );
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFF1E1E1E),
+            foregroundColor: Colors.white,
+          ),
+          dialogBackgroundColor: const Color(0xFF1E1E1E),
+        ),
+        child: child!,
+      );
+    },
+  );
 
-    if (picked != null) {
-      setState(() {
-        _dateRange = picked;
-        _applyFilters();
-      });
-    }
+  if (picked != null) {
+    setState(() {
+      _dateRange = picked;
+      _applyFilters();
+    });
   }
+}
   
   void _setQuickDateRange(String type) {
     final now = DateTime.now();
