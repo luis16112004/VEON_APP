@@ -53,12 +53,42 @@ class _ReportsScreenState extends State<ReportsScreen> {
     setState(() => _isLoading = true);
     try {
       final sales = await _saleService.getAllSales();
-      final sellers = await _authService.getUsers();
+      final allUsers = await _authService.getUsers();
       
+      // Extract unique user IDs from sales
+      final salesUserIds = sales.map((s) => s.userId).where((id) => id != null).toSet();
+      
+      // Create a map of existing users for quick lookup
+      final userMap = {for (var user in allUsers) user.id: user};
+      
+      // Identify missing users (present in sales but not in users list)
+      final missingUserIds = salesUserIds.where((id) => !userMap.containsKey(id));
+      
+      // Create placeholder users for missing IDs
+      final ghostUsers = missingUserIds.map((id) => UserModel(
+        id: id!,
+        name: 'Vendedor (ID: ${id.substring(0, 4)}...)',
+        email: '',
+        role: 'vendedor',
+      )).toList();
+      
+      // Combine real users and ghost users
+      final potentialSellers = [...allUsers, ...ghostUsers];
+      
+      // Filter to show only relevant users:
+      // 1. Role contains 'vendedor' OR 'gerente'
+      // 2. OR User has at least one sale
+      final activeSellers = potentialSellers.where((user) {
+        final isSalesRole = user.role.toLowerCase().contains('vendedor') || 
+                            user.role.toLowerCase().contains('gerente');
+        final hasSales = salesUserIds.contains(user.id);
+        return isSalesRole || hasSales;
+      }).toList();
+
       if (mounted) {
         setState(() {
           _allSales = sales;
-          _sellers = sellers;
+          _sellers = activeSellers;
           _applyFilters();
           _isLoading = false;
         });
@@ -151,6 +181,32 @@ class _ReportsScreenState extends State<ReportsScreen> {
       });
     }
   }
+  
+  void _setQuickDateRange(String type) {
+    final now = DateTime.now();
+    DateTimeRange newRange;
+    
+    switch (type) {
+      case 'today':
+        newRange = DateTimeRange(start: now, end: now);
+        break;
+      case 'week':
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        newRange = DateTimeRange(start: startOfWeek, end: now);
+        break;
+      case 'month':
+        final startOfMonth = DateTime(now.year, now.month, 1);
+        newRange = DateTimeRange(start: startOfMonth, end: now);
+        break;
+      default:
+        return;
+    }
+    
+    setState(() {
+      _dateRange = newRange;
+      _applyFilters();
+    });
+  }
 
   Future<void> _exportPdf() async {
     final pdf = pw.Document();
@@ -225,7 +281,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       sheetObject.appendRow([
         excel_pkg.TextCellValue(DateFormat('yyyy-MM-dd').format(sale.date)),
         excel_pkg.TextCellValue(sale.clientName),
-        excel_pkg.TextCellValue(_sellers.firstWhere((s) => s.id == sale.userId, orElse: () => UserModel(id: '', name: 'Unknown', email: '')).name),
+        excel_pkg.TextCellValue(_getSellerName(sale.userId)),
         excel_pkg.DoubleCellValue(sale.total),
         excel_pkg.TextCellValue(sale.status.displayName),
       ]);
@@ -282,62 +338,83 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       border: Border.all(color: Colors.grey.withOpacity(0.3)),
                     ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Date Range Picker
-                        InkWell(
-                          onTap: _selectDateRange,
+                        // Quick Date Selectors
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
-                              const Icon(Icons.calendar_today, color: AppColors.primaryGreen, size: 20),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  _dateRange != null
-                                      ? '${DateFormat('MMM dd, yyyy').format(_dateRange!.start)} - ${DateFormat('MMM dd, yyyy').format(_dateRange!.end)}'
-                                      : 'All Time',
-                                  style: const TextStyle(color: Colors.white, fontSize: 16),
-                                ),
-                              ),
-                              const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                              _buildDateChip('Today', 'today'),
+                              const SizedBox(width: 8),
+                              _buildDateChip('This Week', 'week'),
+                              const SizedBox(width: 8),
+                              _buildDateChip('This Month', 'month'),
                             ],
                           ),
                         ),
-                        const Divider(color: Colors.grey, height: 24),
-                        // Seller Dropdown
-                        Row(
-                          children: [
-                            const Icon(Icons.person, color: AppColors.primaryGreen, size: 20),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<UserModel>(
-                                  value: _selectedSeller,
-                                  hint: const Text('All Sellers', style: TextStyle(color: Colors.white)),
-                                  dropdownColor: const Color(0xFF2A2A2A),
-                                  icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                                  isExpanded: true,
-                                  items: [
-                                    const DropdownMenuItem<UserModel>(
-                                      value: null,
-                                      child: Text('All Sellers', style: TextStyle(color: Colors.white)),
-                                    ),
-                                    ..._sellers.map((seller) {
-                                      return DropdownMenuItem<UserModel>(
-                                        value: seller,
-                                        child: Text(seller.name, style: const TextStyle(color: Colors.white)),
-                                      );
-                                    }),
-                                  ],
-                                  onChanged: (UserModel? newValue) {
-                                    setState(() {
-                                      _selectedSeller = newValue;
-                                      _applyFilters();
-                                    });
-                                  },
-                                ),
-                              ),
+                        const SizedBox(height: 16),
+                        // Date Range Picker
+                        InkWell(
+                          onTap: _selectDateRange,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.withOpacity(0.5)),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ],
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_today, color: AppColors.primaryGreen, size: 20),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _dateRange != null
+                                        ? '${DateFormat('MMM dd, yyyy').format(_dateRange!.start)} - ${DateFormat('MMM dd, yyyy').format(_dateRange!.end)}'
+                                        : 'All Time',
+                                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Seller Dropdown
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.withOpacity(0.5)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<UserModel>(
+                              value: _selectedSeller,
+                              hint: const Text('All Sellers', style: TextStyle(color: Colors.white)),
+                              dropdownColor: const Color(0xFF2A2A2A),
+                              icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                              isExpanded: true,
+                              items: [
+                                const DropdownMenuItem<UserModel>(
+                                  value: null,
+                                  child: Text('All Sellers', style: TextStyle(color: Colors.white)),
+                                ),
+                                ..._sellers.map((seller) {
+                                  return DropdownMenuItem<UserModel>(
+                                    value: seller,
+                                    child: Text(seller.name, style: const TextStyle(color: Colors.white)),
+                                  );
+                                }),
+                              ],
+                              onChanged: (UserModel? newValue) {
+                                setState(() {
+                                  _selectedSeller = newValue;
+                                  _applyFilters();
+                                });
+                              },
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -427,6 +504,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
     );
   }
+  
+  Widget _buildDateChip(String label, String type) {
+    return ActionChip(
+      label: Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+      backgroundColor: const Color(0xFF3A3A3A),
+      onPressed: () => _setQuickDateRange(type),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    );
+  }
 
   Widget _buildSummaryCard(String title, String value, IconData icon, Color color) {
     return Container(
@@ -511,7 +597,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             if (sale.userId != null)
                Text(
-                'Seller: ${_sellers.firstWhere((s) => s.id == sale.userId, orElse: () => UserModel(id: '', name: 'Unknown', email: '')).name}',
+                'Seller: ${_getSellerName(sale.userId)}',
                 style: const TextStyle(color: Colors.grey, fontSize: 10),
               ),
           ],
